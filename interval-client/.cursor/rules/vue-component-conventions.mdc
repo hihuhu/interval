@@ -1,0 +1,16 @@
+---
+description: Defines standards for Vue 3 component design, including Composition API usage, props/emits typing, naming conventions, and style scoping.
+globs: "**/*.vue"
+---
+- All components must use Vue 3 Composition API with `<script setup lang="ts">`.
+- Component file names must use PascalCase (e.g., UserProfile.vue, TodoList.vue).
+- Props must be defined using `defineProps<T>()` with a TypeScript interface.
+- Use `withDefaults(defineProps<T>(), { ... })` when default values are needed.
+- Emits must be explicitly typed using `defineEmits<{ (e: 'eventName', payload: Type): void }>()`.
+- Use `<style scoped>` to prevent CSS leakage between components.
+- Components should follow the single responsibility principle — one component, one purpose.
+- Extract reusable logic into composables (src/composables/) rather than duplicating code across components.
+- Template expressions should be simple. Move complex logic into computed properties or methods.
+- Avoid using `v-html` unless absolutely necessary (XSS risk). Sanitize content if used.
+- Use `v-for` with `:key` always bound to a unique identifier, never an index (unless the list is static).
+- Reusable UI components go in src/components/. Page-level components (route targets) go in src/views/.

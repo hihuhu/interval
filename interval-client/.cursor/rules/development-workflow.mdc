@@ -1,0 +1,15 @@
+---
+description: Enforces a strict feature delivery workflow for Vue 3 frontend projects, requiring design confirmation, documentation, tests, and then implementation.
+globs: "**/*"
+---
+- For any new feature or non-trivial UI change, must first provide a design proposal (SDD) before writing implementation code.
+- Must explicitly ask for user confirmation after presenting the design proposal.
+- Must not generate implementation code until the user has explicitly approved the design.
+- Before writing any component code, must first define the component interface (props, emits, slots, expected behavior) in documentation.
+- Before writing any implementation code, must first create Vitest + Vue Test Utils test cases.
+- Test cases should cover component rendering, user interactions, prop variations, and API integration scenarios unless the user requests otherwise.
+- Required output order for new features is: SDD design proposal, component/API documentation, test cases, implementation code, validation and fixes.
+- Must not skip the documentation or testing phases unless the user explicitly instructs so.
+- Must follow Vue 3 Composition API best practices and TypeScript strict typing throughout.
+- If the request is ambiguous, must clarify scope before implementation.
+- If an existing implementation conflicts with this workflow, must explain the conflict to the user before proceeding.

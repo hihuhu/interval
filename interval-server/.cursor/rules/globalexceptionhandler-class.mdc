@@ -1,0 +1,26 @@
+---
+description: Structure and conventions for the GlobalExceptionHandler class, providing centralized exception handling across all RestControllers.
+globs: **/src/main/java/**/GlobalExceptionHandler.java
+---
+- Must annotate the class with @RestControllerAdvice.
+- Must provide a static helper method `errorResponseEntity(String message, HttpStatus status)` that wraps errors in ApiResponse.
+- Must handle at least IllegalArgumentException, returning HTTP 400 with a structured ApiResponse error body.
+- Should handle additional common exceptions as needed (e.g., EntityNotFoundException -> 404, MethodArgumentNotValidException -> 400).
+- All exception handler methods must return ResponseEntity<ApiResponse<?>>.
+- Reference structure:
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    public static ResponseEntity<ApiResponse<?>> errorResponseEntity(String message, HttpStatus status) {
+        ApiResponse<?> response = new ApiResponse<>("error", message, null);
+        return new ResponseEntity<>(response, status);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<?>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+}
+```

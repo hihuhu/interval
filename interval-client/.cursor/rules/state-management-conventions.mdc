@@ -1,0 +1,13 @@
+---
+description: Defines conventions for Pinia state management, including store structure, naming, and usage patterns.
+globs: "**/src/stores/**/*.ts"
+---
+- Use Pinia for global/shared state management.
+- Each store must be defined using the Composition API style (setup stores) with `defineStore`.
+- Store files must be placed in src/stores/ directory, named as use<Domain>Store.ts (e.g., useUserStore.ts, useAuthStore.ts).
+- Store IDs must be unique, descriptive strings matching the domain (e.g., 'user', 'auth').
+- Keep store logic minimal — complex business logic should be in composables (src/composables/) or services (src/services/).
+- Never directly mutate store state from components; use store actions or Pinia's `$patch`.
+- Stores should expose: state (reactive data), getters (computed derived data), and actions (methods to modify state).
+- Async operations in stores (e.g., API calls) must use the service layer, not direct Axios calls.
+- Type all store state, getters, and action parameters/returns with TypeScript.

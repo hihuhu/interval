@@ -1,0 +1,18 @@
+---
+description: Enforces a System Design Document (SDD) driven development approach for the frontend, requiring structured design documentation before implementation.
+globs: "**/*"
+---
+- This project follows an SDD (System Design Document) driven development approach.
+- Before implementing any new feature or module, a System Design Document must be produced and approved by the user.
+- The frontend SDD must include the following sections at minimum:
+  1. **Overview**: Brief description of the feature/module purpose and scope.
+  2. **Component Architecture**: Component tree, parent-child relationships, and data flow between components.
+  3. **Data Flow**: How data moves through the app (API -> Service -> Store/Composable -> Component).
+  4. **API Integration Points**: Which backend endpoints are consumed, request/response types.
+  5. **State Management Design**: What state is local vs. global (Pinia), store structure if applicable.
+  6. **UI/UX Considerations**: Layout, responsiveness, user interaction flows, loading/error states.
+  7. **Testing Strategy**: What test cases will be written (component tests, integration tests, edge cases).
+- The SDD should be saved as a Markdown file under the docs/design/ directory (e.g., docs/design/sdd-<feature-name>.md).
+- Implementation must not begin until the user explicitly approves the SDD.
+- The development output order after SDD approval is: component/API documentation -> Vitest test cases -> implementation code -> validation and fixes.
+- If the feature scope changes during implementation, the SDD should be updated to reflect the changes.

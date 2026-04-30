@@ -1,0 +1,28 @@
+---
+description: Structure and conventions for the ApiResponse wrapper class used as the standard API response format across all RestControllers.
+globs: **/src/main/java/**/ApiResponse.java
+---
+- Must use Lombok @Data, @NoArgsConstructor, and @AllArgsConstructor annotations.
+- Must be a generic class ApiResponse<T>.
+- Fields: `result` (String, "SUCCESS" or "ERROR"), `message` (String), `data` (T, nullable).
+- Should provide static factory methods for convenience (e.g., `success(T data)`, `error(String message)`).
+- Reference structure:
+
+```java
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ApiResponse<T> {
+    private String result;    // "SUCCESS" or "ERROR"
+    private String message;   // success or error message
+    private T data;           // return object from service class, if successful
+
+    public static <T> ApiResponse<T> success(String message, T data) {
+        return new ApiResponse<>("SUCCESS", message, data);
+    }
+
+    public static ApiResponse<?> error(String message) {
+        return new ApiResponse<>("ERROR", message, null);
+    }
+}
+```

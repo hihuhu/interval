@@ -1,0 +1,13 @@
+---
+description: Enforces front-end and back-end separation architecture from the frontend perspective, ensuring the Vue app operates as a pure API consumer.
+globs: "**/*"
+---
+- This project follows a front-end and back-end separation architecture.
+- The frontend is a pure API consumer. It communicates with the backend exclusively through RESTful JSON APIs.
+- The backend API base URL must be configured via environment variables (.env files), never hardcoded in source code.
+- All API responses follow the backend's standard ApiResponse<T> structure: { result, message, data }.
+- The frontend must not contain any server-side logic, database access, or backend business rules.
+- CORS handling is the backend's responsibility. The frontend should not need CORS workarounds in production.
+- For local development, Vite's proxy configuration (vite.config.ts) may be used to avoid CORS issues during development.
+- Authentication should use token-based mechanisms (e.g., JWT). Tokens should be stored securely and attached to API requests via Axios interceptors.
+- The frontend and backend are deployed independently. No assumptions about shared hosting.

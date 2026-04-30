@@ -1,0 +1,3 @@
+Monorepo: interval-server (Spring Boot 3, Java 17) + interval-client (Vue 3, TypeScript).
+Design docs: docs/design/. UI prototypes: docs/prototypes/.
+Rule: For any feature, update docs/design/ first → write tests → implement. No exceptions.

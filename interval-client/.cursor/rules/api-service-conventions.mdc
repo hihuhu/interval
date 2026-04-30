@@ -1,0 +1,22 @@
+---
+description: Defines standards for the API service layer, including Axios instance configuration, service file structure, TypeScript typing, and error handling aligned with the backend's ApiResponse format.
+globs: "**/src/{api,services}/**/*.ts"
+---
+- All HTTP calls must use Axios through a centralized instance configured in src/services/http.ts (or src/api/http.ts).
+- The Axios instance must set baseURL from the Vite environment variable `import.meta.env.VITE_API_BASE_URL`.
+- Request interceptors must attach the Authorization token (e.g., Bearer JWT) to every outgoing request if authentication is enabled.
+- Response interceptors must unwrap the backend's standard ApiResponse<T> structure and handle global errors (e.g., 401 redirect to login, 500 show error notification).
+- Each backend resource should have its own service file (e.g., src/services/userService.ts, src/services/timeRecordService.ts).
+- Service methods must be async functions with proper TypeScript return types.
+- Backend ApiResponse<T> structure must be typed in src/types/api.ts:
+
+```typescript
+interface ApiResponse<T> {
+  result: 'SUCCESS' | 'ERROR';
+  message: string;
+  data: T | null;
+}
+```
+
+- Service methods should return the unwrapped `data` field on success, or throw/handle errors on failure.
+- Never call Axios directly from components. Always go through the service layer.

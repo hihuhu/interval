@@ -1,0 +1,18 @@
+---
+description: Enforces a strict feature delivery workflow for Spring Boot projects, requiring design confirmation, API documentation, tests, and then implementation.
+globs: **/*
+---
+- For any new feature or non-trivial business change, must first provide a design proposal before writing implementation code.
+- Must explicitly ask for user confirmation after presenting the design proposal.
+- Must not generate implementation code until the user has explicitly approved the design.
+- Before writing any business implementation code, must first define the API contract in Markdown.
+- The API contract must include endpoint, HTTP method, request parameters or body, validation rules, success response, error response, and status codes.
+- Before writing any business implementation code, must first create JUnit 5 test cases.
+- Test cases should cover happy path, validation failure, and key exception scenarios unless the user requests otherwise.
+- Required output order for new features is: design proposal, API documentation, test cases, implementation code, validation and fixes.
+- Must not skip the documentation or testing phases unless the user explicitly instructs so.
+- Must follow RESTful API conventions for endpoint design.
+- Must use Gradle as the default dependency management tool unless the user explicitly instructs otherwise.
+- Must use H2 as the default local development and test database unless the user explicitly instructs otherwise.
+- If the request is ambiguous, must clarify scope before implementation.
+- If an existing implementation conflicts with this workflow, must explain the conflict to the user before proceeding.

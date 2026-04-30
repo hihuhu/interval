@@ -1,0 +1,15 @@
+---
+description: Governs the Vue 3 + TypeScript + Vite project configuration, defining the technology stack and build setup.
+globs: "{vite.config.*,tsconfig.*,package.json,env.*,.env*}"
+---
+- Framework: Vue 3 with Composition API (script setup).
+- Language: TypeScript (strict mode enabled).
+- Build Tool: Vite.
+- State Management: Pinia (when global state is needed).
+- Router: Vue Router 4.
+- HTTP Client: Axios.
+- Testing: Vitest + @vue/test-utils.
+- Architecture: Front-end and back-end separation (API-only consumer, no SSR).
+- The backend API base URL must be configured via Vite environment variables (VITE_API_BASE_URL in .env files), never hardcoded.
+- TypeScript strict mode must be enabled in tsconfig.json.
+- Path aliases (e.g., @ -> src/) should be configured in both vite.config.ts and tsconfig.json.

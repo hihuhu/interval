@@ -1,0 +1,13 @@
+---
+description: Defines conventions for Vue Router 4 configuration, route definition, lazy loading, and navigation guards.
+globs: "**/src/router/**/*.ts"
+---
+- Use Vue Router 4 with createRouter and createWebHistory.
+- Route definitions must be placed in src/router/index.ts.
+- Use lazy loading (dynamic imports) for all route components to optimize bundle size: `() => import('@/views/SomePage.vue')`.
+- Route names must be unique and use camelCase (e.g., 'userProfile', 'timeRecordList').
+- Route paths must be kebab-case and resource-based (e.g., '/time-records', '/users/:id').
+- Navigation guards (beforeEach) should be used for authentication checks when needed.
+- Use route meta fields for declaring auth requirements: `meta: { requiresAuth: true }`.
+- Nested routes should be used for layouts and parent-child page relationships.
+- Always handle 404 with a catch-all route at the end of the route array.

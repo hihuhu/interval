@@ -1,0 +1,93 @@
+# =========================
+# Root common
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+*.out
+*.err
+
+# Runtime / temp
+*.pid
+*.seed
+*.pid.lock
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
+
+# =========================
+# IDE / Editor
+# =========================
+.idea/
+.vscode/
+*.iml
+
+# Cursor workspace cache
+.cursor/storage/
+.cursor/cache/
+.cursor/logs/
+.cursor/tmp/
+.cursor/extensions/
+.cursor/index/
+.cursor/server/
+.cursor/workspaceStorage/
+
+# =========================
+# Root env files
+# =========================
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# =========================
+# Java / Gradle (interval-server)
+# =========================
+interval-server/.gradle/
+interval-server/build/
+interval-server/bin/
+interval-server/out/
+interval-server/target/
+interval-server/.classpath
+interval-server/.project
+interval-server/.settings/
+interval-server/**/*.class
+interval-server/**/*.jar
+interval-server/**/*.war
+interval-server/**/*.ear
+interval-server/hs_err_pid*
+interval-server/replay_pid*
+
+# =========================
+# Vue / Node.js (interval-client)
+# =========================
+interval-client/node_modules/
+interval-client/dist/
+interval-client/.output/
+interval-client/.nuxt/
+interval-client/.vite/
+interval-client/.cache/
+interval-client/coverage/
+interval-client/.eslintcache
+interval-client/*.tsbuildinfo
+interval-client/npm-debug.log*
+interval-client/yarn-debug.log*
+interval-client/yarn-error.log*
+interval-client/pnpm-debug.log*
+interval-client/.env
+interval-client/.env.*
+!interval-client/.env.example
+!interval-client/.env.sample

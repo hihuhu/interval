@@ -1,0 +1,12 @@
+---
+description: Enforces front-end and back-end separation architecture, ensuring the backend serves as an API-only service with proper CORS and security configurations.
+globs: **/*
+---
+- This project follows a front-end and back-end separation architecture.
+- The backend must serve as an API-only service (RESTful JSON APIs). No server-side rendering or template engines (e.g., Thymeleaf, JSP, Freemarker) are allowed.
+- All API responses must be in JSON format, wrapped in the standard ApiResponse structure.
+- CORS must be configured to allow cross-origin requests from the frontend application.
+- A global CORS configuration class (WebMvcConfigurer or @CrossOrigin) should be used instead of per-controller annotations, unless a specific controller needs different rules.
+- The backend must not serve static frontend resources (HTML, CSS, JS). Frontend deployment is handled separately.
+- API versioning should be considered for long-lived projects (e.g., "/api/v1/...").
+- Authentication/authorization (if needed) should use token-based mechanisms (e.g., JWT) rather than session-based, to stay stateless and frontend-agnostic.
