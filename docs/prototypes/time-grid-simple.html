@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Grid - Interval</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" v-cloak class="min-h-screen p-8">
+        <div class="max-w-7xl mx-auto mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Time Grid</h1>
+                    <p class="text-gray-600 mt-1">以 15 分钟为单位记录今天做了什么</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600">
+                        当前用户：<span class="font-medium text-gray-900">{{ currentUser }}</span>
+                    </span>
+                    <button @click="logout" 
+                        class="px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50">
+                        退出登录
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="max-w-7xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-sm p-8 text-center">
+                <div class="mb-6">
+                    <svg class="w-20 h-20 mx-auto text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">欢迎使用 Time Grid</h2>
+                <p class="text-gray-600 mb-6">
+                    登录成功！完整的 96 格子时间网格功能正在开发中。
+                </p>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left mb-6">
+                    <h3 class="text-sm font-semibold text-blue-900 mb-2">📋 开发进度</h3>
+                    <ul class="text-sm text-blue-700 space-y-1">
+                        <li>✅ 用户认证系统设计完成</li>
+                        <li>✅ 分类管理模块设计完成</li>
+                        <li>✅ 测试用例编写完成（13 个）</li>
+                        <li>⏳ 后端 API 实现中</li>
+                        <li>⏳ 完整前端原型开发中</li>
+                    </ul>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
+                    <h3 class="text-sm font-semibold text-amber-900 mb-2">⚠️ 注意</h3>
+                    <p class="text-sm text-amber-700">
+                        原始的 time-grid-v1.html 文件被意外覆盖。<br>
+                        请参考 <code class="bg-amber-100 px-1 rounded">FIX_TIME_GRID.md</code> 了解如何恢复完整功能。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        
+        createApp({
+            data() {
+                return {
+                    currentUser: localStorage.getItem('username') || 'Demo User'
+                };
+            },
+            mounted() {
+                // 检查登录状态
+                if (!localStorage.getItem('username')) {
+                    alert('请先登录');
+                    window.location.href = 'login.html';
+                }
+            },
+            methods: {
+                logout() {
+                    if (confirm('确定要退出登录吗？')) {
+                        localStorage.removeItem('username');
+                        localStorage.removeItem('token');
+                        window.location.href = 'login.html';
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
