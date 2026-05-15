@@ -45,15 +45,51 @@ Interval 是一个基于“柳比歇夫时间记录法”的时间块记录工�
 | `userId` | Long | 所属用户 ID |
 | `name` | String | 分类名称（如"工作"、"学习"） |
 | `colorCode` | String | 颜色代码（如"#3b82f6"） |
+| `status` | Enum | 分类状态：ACTIVE（激活）/ ARCHIVED（已归档） |
 | `displayOrder` | Integer | 显示顺序 |
 | `createdAt` | Instant | 创建时间 |
 | `updatedAt` | Instant | 更新时间 |
 
+#### 2.2.1 分类状态生命周期
+
+分类具有以下状态：
+
+- **ACTIVE（激活）**：正常可用，出现在"新增时间块"的分类下拉列表中
+- **ARCHIVED（已归档）**：不可选择，但历史记录中仍可见并标注"(已归档)"
+
+状态转换规则：
+
+```mermaid
+stateDiagram-v2
+    [*] --> ACTIVE: 创建分类
+    ACTIVE --> ARCHIVED: 智能删除（有历史记录）
+    ACTIVE --> [*]: 物理删除（无历史记录）
+    ARCHIVED --> ACTIVE: 恢复分类（可选功能）
+```
+
+#### 2.2.2 智能删除逻辑
+
+当用户删除分类时，系统自动判断并执行最安全的操作：
+
+**场景 A：无历史记录**
+- 检查：该分类从未在任何 TimeSlot 中使用
+- 操作：物理删除（从数据库移除）
+- 响应：`{ "action": "DELETED", "message": "分类已删除", "affectedRecords": 0 }`
+
+**场景 B：有历史记录**
+- 检查：存在 TimeSlot 引用该分类
+- 操作：归档（UPDATE status = 'ARCHIVED'）
+- 响应：`{ "action": "ARCHIVED", "message": "该分类已有 N 条记录，已自动归档", "affectedRecords": N }`
+- 效果：
+  - 分类在"新增时间块"下拉列表中消失
+  - 历史记录回显时显示"工作 (已归档)"
+  - 颜色保持不变
+
 约束：
 
-- 同一用户的分类名称不能重复：`UNIQUE(user_id, name)`
-- 每个用户至少需要一个默认分类
-- 删除分类时，需要检查是否有时间块正在使用该分类
+- 同一用户的活跃分类名称不能重复（允许 ACTIVE 和 ARCHIVED 同名共存）
+- 每个用户注册时自动创建 5 个默认分类
+- 删除分类时，系统自动检查并选择安全操作
 
 ### 2.3 TimeSlot
 
@@ -68,9 +104,46 @@ Interval 是一个基于“柳比歇夫时间记录法”的时间块记录工�
 | `date` | LocalDate | 日期 |
 | `slotIndex` | Integer | 当天第几个 15 分钟格，范围 `0-95` |
 | `activityName` | String | 活动名称 |
-| `category` | String | 活动分类 |
+| `categoryId` | Long | 关联的分类 ID（外键） |
 | `createdAt` | Instant | 创建时间 |
 | `updatedAt` | Instant | 更新时间 |
+
+#### 2.3.1 分类关联与回显策略
+
+TimeSlot 通过 `categoryId` 外键关联 Category 表。查询历史记录时：
+
+- 使用 LEFT JOIN 实时获取分类信息（名称、颜色、状态）
+- 如果分类状态为 ARCHIVED，前端自动拼接"(已归档)"标注
+- 如果分类已被物理删除（极少见），显示"未知分类"
+
+**查询示例：**
+
+```sql
+SELECT 
+    ts.id, ts.slot_index, ts.activity_name,
+    c.id AS category_id,
+    c.name AS category_name,
+    c.color_code AS category_color,
+    c.status AS category_status
+FROM time_slots ts
+LEFT JOIN categories c ON ts.category_id = c.id
+WHERE ts.user_id = ? AND ts.date = ?
+ORDER BY ts.slot_index
+```
+
+**DTO 结构：**
+
+```typescript
+{
+  slotIndex: 36,
+  activityName: "写代码",
+  categoryId: 1,
+  categoryName: "工作",
+  categoryColor: "#3b82f6",
+  categoryStatus: "ARCHIVED",
+  displayName: "工作 (已归档)"  // 前端自动计算
+}
+```
 
 `slotIndex` 与时间的换算关系：
 
@@ -263,6 +336,7 @@ CREATE TABLE categories (
     user_id BIGINT NOT NULL,
     name VARCHAR(100) NOT NULL,
     color_code VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     display_order INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
@@ -271,8 +345,8 @@ CREATE TABLE categories (
         FOREIGN KEY (user_id)
         REFERENCES users(id),
 
-    CONSTRAINT uk_categories_user_name
-        UNIQUE (user_id, name)
+    CONSTRAINT ck_categories_status
+        CHECK (status IN ('ACTIVE', 'ARCHIVED'))
 );
 ```
 
@@ -284,6 +358,7 @@ CREATE TABLE categories (
 | `user_id` | BIGINT | FK, NOT NULL | 所属用户 |
 | `name` | VARCHAR(100) | NOT NULL | 分类名称 |
 | `color_code` | VARCHAR(20) | NOT NULL | 颜色代码（如 #3b82f6） |
+| `status` | VARCHAR(20) | NOT NULL | 分类状态：ACTIVE / ARCHIVED |
 | `display_order` | INTEGER | NOT NULL | 显示顺序 |
 | `created_at` | TIMESTAMP | NOT NULL | 创建时间 |
 | `updated_at` | TIMESTAMP | NOT NULL | 更新时间 |
@@ -291,8 +366,17 @@ CREATE TABLE categories (
 推荐索引：
 
 ```sql
-CREATE INDEX idx_categories_user
-ON categories(user_id);
+CREATE INDEX idx_categories_user_status
+ON categories(user_id, status);
+```
+
+**唯一约束说明：**
+
+为支持"归档后重新创建同名分类"，不设置数据库级唯一约束。业务层通过以下查询保证活跃分类名称唯一：
+
+```sql
+SELECT COUNT(*) FROM categories 
+WHERE user_id = ? AND name = ? AND status = 'ACTIVE'
 ```
 
 ### 6.3 time_slots 表
@@ -314,7 +398,8 @@ CREATE TABLE time_slots (
 
     CONSTRAINT fk_time_slots_category
         FOREIGN KEY (category_id)
-        REFERENCES categories(id),
+        REFERENCES categories(id)
+        ON DELETE RESTRICT,
 
     CONSTRAINT uk_time_slots_user_date_slot
         UNIQUE (user_id, date, slot_index),
@@ -342,9 +427,16 @@ CREATE TABLE time_slots (
 ```sql
 CREATE INDEX idx_time_slots_user_date
 ON time_slots(user_id, date);
+
+CREATE INDEX idx_time_slots_category
+ON time_slots(category_id);
 ```
 
-该索引用于优化按用户与日期查询某日 96 格数据的场景。
+**外键约束说明：**
+
+- `ON DELETE RESTRICT`：防止误删除有历史记录的分类
+- 智能删除逻辑会先检查 `COUNT(*)`，有记录则归档而非删除
+- 归档的分类保留在数据库中，外键关系不受影响
 
 ## 7. 后端领域模型设计
 
@@ -376,15 +468,10 @@ public class User {
 
 ```java
 @Entity
-@Table(
-    name = "categories",
-    uniqueConstraints = {
-        @UniqueConstraint(
-            name = "uk_categories_user_name",
-            columnNames = {"user_id", "name"}
-        )
-    }
-)
+@Table(name = "categories")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -399,6 +486,10 @@ public class Category {
     @Column(name = "color_code", nullable = false, length = 20)
     private String colorCode;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CategoryStatus status = CategoryStatus.ACTIVE;
+
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
 
@@ -407,6 +498,15 @@ public class Category {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+}
+```
+
+### 7.2.1 CategoryStatus Enum
+
+```java
+public enum CategoryStatus {
+    ACTIVE,    // 激活状态，可在新增时间块时选择
+    ARCHIVED   // 已归档，不可选择，但历史记录可见
 }
 ```
 
@@ -423,6 +523,9 @@ public class Category {
         )
     }
 )
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class TimeSlot {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -440,8 +543,9 @@ public class TimeSlot {
     @Column(name = "activity_name", nullable = false)
     private String activityName;
 
-    @Column(name = "category_id", nullable = false)
-    private Long categoryId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -450,6 +554,12 @@ public class TimeSlot {
     private Instant updatedAt;
 }
 ```
+
+**关联说明：**
+
+- 使用 `@ManyToOne` 关联 Category 实体
+- `FetchType.LAZY` 延迟加载，避免不必要的查询
+- 查询历史记录时使用 `@EntityGraph` 避免 N+1 问题
 
 ## 8. 认证模块设计
 
@@ -668,7 +778,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - 抛出 `IllegalArgumentException`
 - 异常消息为 `"Invalid username or password"`
 
-#### 测试用例 4：注册成功
+#### 测试用例 4：注册成功并初始化默认分类
 
 **Given:**
 - 数据库中不存在用户 `newuser`
@@ -682,6 +792,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - `username` 字段为 `"newuser"`
 - 数据库中新增一条用户记录
 - 密码字段存储的是 BCrypt 哈希值，不是明文
+- 自动创建 5 个默认分类：睡眠 🛌、工作 💻、学习 📚、运动 🏃、杂项 ☕
 
 #### 测试用例 5：注册时用户名已存在
 
@@ -695,6 +806,20 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - 抛出 `IllegalArgumentException`
 - 异常消息为 `"Username already exists"`
 
+### 8.4 默认分类初始化
+
+新用户注册时，系统自动创建以下默认分类：
+
+| 分类名称 | 颜色代码 | 显示顺序 |
+|---------|---------|---------|
+| 睡眠 | #64748b | 0 |
+| 工作 | #3b82f6 | 1 |
+| 学习 | #8b5cf6 | 2 |
+| 运动 | #f97316 | 3 |
+| 杂项 | #6b7280 | 4 |
+
+用户可以自由删除或修改这些默认分类。
+
 ## 9. 分类管理模块设计
 
 ### 9.1 分类管理需求
@@ -703,19 +828,21 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 核心能力：
 
-- 查看自己的所有分类
+- 查看自己的活跃分类（status = ACTIVE）
 - 新建分类（指定名称和颜色）
 - 编辑分类（修改名称、颜色、显示顺序）
-- 删除分类（需检查是否被时间块引用）
+- 智能删除分类（自动判断物理删除或归档）
 - 分类按 `display_order` 排序显示
 
 ### 9.2 分类 API 契约
 
-#### 9.2.1 获取当前用户的所有分类
+#### 9.2.1 获取当前用户的活跃分类
 
 ```http
 GET /api/categories
 ```
+
+**说明：** 默认仅返回 `status = ACTIVE` 的分类，用于"新增时间块"的下拉列表。
 
 **Response:**
 
@@ -728,12 +855,14 @@ GET /api/categories
       "id": 1,
       "name": "工作",
       "colorCode": "#3b82f6",
+      "status": "ACTIVE",
       "displayOrder": 0
     },
     {
       "id": 2,
       "name": "学习",
       "colorCode": "#8b5cf6",
+      "status": "ACTIVE",
       "displayOrder": 1
     }
   ]
@@ -765,6 +894,7 @@ POST /api/categories
     "id": 3,
     "name": "运动",
     "colorCode": "#f97316",
+    "status": "ACTIVE",
     "displayOrder": 2
   }
 }
@@ -772,12 +902,12 @@ POST /api/categories
 
 **错误响应：**
 
-分类名称已存在：
+活跃分类名称已存在：
 
 ```json
 {
   "result": "ERROR",
-  "message": "Category name already exists",
+  "message": "Active category with this name already exists",
   "data": null
 }
 ```
@@ -808,57 +938,74 @@ PUT /api/categories/{id}
     "id": 1,
     "name": "工作时间",
     "colorCode": "#2563eb",
+    "status": "ACTIVE",
     "displayOrder": 0
   }
 }
 ```
 
-#### 9.2.4 删除分类
+#### 9.2.4 智能删除分类
 
 ```http
 DELETE /api/categories/{id}
 ```
 
-**Response:**
+**场景 A：无历史记录（物理删除）**
 
 ```json
 {
   "result": "SUCCESS",
   "message": "Category deleted successfully",
-  "data": null
+  "data": {
+    "action": "DELETED",
+    "affectedRecords": 0
+  }
 }
 ```
 
-**错误响应：**
-
-分类正在被使用：
+**场景 B：有历史记录（自动归档）**
 
 ```json
 {
-  "result": "ERROR",
-  "message": "Cannot delete category: it is being used by time slots",
-  "data": null
+  "result": "SUCCESS",
+  "message": "Category has 15 time records and has been archived",
+  "data": {
+    "action": "ARCHIVED",
+    "affectedRecords": 15
+  }
+}
+```
+
+**前端处理建议：**
+
+```javascript
+if (response.data.action === 'ARCHIVED') {
+  showNotification({
+    type: 'info',
+    title: '分类已归档',
+    message: `检测到该分类已有 ${response.data.affectedRecords} 条历史记录，已自动为您转为归档状态。历史记录将保留并标注"(已归档)"。`
+  });
 }
 ```
 
 ### 9.3 分类管理测试规范
 
-#### 测试用例 1：获取用户分类列表
+#### 测试用例 1：获取用户活跃分类列表
 
 **Given:**
-- 用户 `alex` (userId=1) 有 3 个分类
+- 用户 `alex` (userId=1) 有 3 个 ACTIVE 分类和 1 个 ARCHIVED 分类
 
 **When:**
-- 调用 `CategoryService.getUserCategories(1)`
+- 调用 `CategoryService.getActiveCategories(1)`
 
 **Then:**
-- 返回包含 3 个 `CategoryDto` 的列表
+- 返回包含 3 个 `CategoryDto` 的列表（不包含 ARCHIVED）
 - 按 `displayOrder` 升序排列
 
 #### 测试用例 2：创建新分类成功
 
 **Given:**
-- 用户 `alex` (userId=1) 没有名为"运动"的分类
+- 用户 `alex` (userId=1) 没有名为"运动"的活跃分类
 
 **When:**
 - 调用 `CategoryService.createCategory(1, "运动", "#f97316")`
@@ -866,21 +1013,22 @@ DELETE /api/categories/{id}
 **Then:**
 - 返回新创建的 `CategoryDto`
 - `id` 字段非空
+- `status` 为 `ACTIVE`
 - `displayOrder` 自动设置为当前最大值 + 1
 
-#### 测试用例 3：创建分类时名称重复
+#### 测试用例 3：创建分类时活跃名称重复
 
 **Given:**
-- 用户 `alex` (userId=1) 已有名为"工作"的分类
+- 用户 `alex` (userId=1) 已有名为"工作"的 ACTIVE 分类
 
 **When:**
 - 调用 `CategoryService.createCategory(1, "工作", "#3b82f6")`
 
 **Then:**
 - 抛出 `IllegalArgumentException`
-- 异常消息为 `"Category name already exists"`
+- 异常消息为 `"Active category with this name already exists"`
 
-#### 测试用例 4：删除未被使用的分类
+#### 测试用例 4：删除无记录的分类（物理删除）
 
 **Given:**
 - 用户 `alex` (userId=1) 有分类 `id=5`
@@ -890,21 +1038,68 @@ DELETE /api/categories/{id}
 - 调用 `CategoryService.deleteCategory(1, 5)`
 
 **Then:**
-- 分类被成功删除
-- 不抛出异常
+- 返回 `DeleteCategoryResponseDto`
+- `action` 为 `"DELETED"`
+- `affectedRecords` 为 `0`
+- 数据库中该分类已被物理删除
 
-#### 测试用例 5：删除正在使用的分类
+#### 测试用例 5：删除有记录的分类（自动归档）
 
 **Given:**
 - 用户 `alex` (userId=1) 有分类 `id=1`
-- 存在 `TimeSlot` 记录的 `category_id=1`
+- 存在 3 条 `TimeSlot` 记录的 `category_id=1`
 
 **When:**
 - 调用 `CategoryService.deleteCategory(1, 1)`
 
 **Then:**
-- 抛出 `IllegalArgumentException`
-- 异常消息为 `"Cannot delete category: it is being used by time slots"`
+- 返回 `DeleteCategoryResponseDto`
+- `action` 为 `"ARCHIVED"`
+- `affectedRecords` 为 `3`
+- 数据库中该分类 `status` 变为 `ARCHIVED`
+- 分类未被物理删除
+
+#### 测试用例 6：归档后不出现在活跃列表
+
+**Given:**
+- 用户 `alex` (userId=1) 有 3 个分类
+- "学习"分类有历史记录并被归档
+
+**When:**
+- 调用 `CategoryService.getActiveCategories(1)`
+
+**Then:**
+- 返回列表不包含"学习"分类
+- 只包含 ACTIVE 状态的分类
+
+#### 测试用例 7：历史记录正确回显归档状态
+
+**Given:**
+- 用户创建分类"学习"并记录时间块
+- 归档"学习"分类
+
+**When:**
+- 查询该日期的时间块
+
+**Then:**
+- 返回的 DTO 中 `categoryStatus` 为 `"ARCHIVED"`
+- `displayName` 为 `"学习 (已归档)"`
+- `categoryName` 为 `"学习"`
+- `categoryColor` 保持不变
+
+#### 测试用例 8：归档后可重新创建同名活跃分类
+
+**Given:**
+- 用户创建并归档"运动"分类
+
+**When:**
+- 用户重新创建同名分类"运动"（但颜色不同）
+
+**Then:**
+- 创建成功，且 ID 不同
+- 新分类 `status` 为 `ACTIVE`
+- 旧分类依然存在且 `status` 为 `ARCHIVED`
+- 活跃分类列表中只显示新分类
 
 ## 10. 核心 API 契约
 
@@ -1194,6 +1389,97 @@ function saveSlots(userId, date, requestSlots):
 
 ## 13. 安全与数据隔离
 
+### 13.1 全局权限控制
+
+除登录/注册接口外，所有 API 必须进行 JWT 校验。
+
+#### 13.1.1 JWT 拦截器
+
+```java
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    
+    @Autowired
+    private JwtUtil jwtUtil;
+    
+    @Override
+    protected void doFilterInternal(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain filterChain
+    ) throws ServletException, IOException {
+        
+        // 白名单：登录/注册接口不需要校验
+        String path = request.getRequestURI();
+        if (path.startsWith("/api/auth/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
+        // 提取 Authorization header
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            sendUnauthorizedResponse(response, "Missing or invalid token");
+            return;
+        }
+        
+        String token = authHeader.substring(7);
+        
+        try {
+            // 验证并解析 token
+            Long userId = jwtUtil.extractUserId(token);
+            String username = jwtUtil.extractUsername(token);
+            
+            // 将用户信息存入请求上下文
+            request.setAttribute("userId", userId);
+            request.setAttribute("username", username);
+            
+            filterChain.doFilter(request, response);
+            
+        } catch (JwtException e) {
+            sendUnauthorizedResponse(response, "Invalid or expired token");
+        }
+    }
+    
+    private void sendUnauthorizedResponse(HttpServletResponse response, String message) 
+        throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.getWriter().write(
+            String.format("{\"result\":\"ERROR\",\"message\":\"%s\",\"data\":null}", message)
+        );
+    }
+}
+```
+
+#### 13.1.2 Controller 层获取当前用户
+
+```java
+@RestController
+@RequestMapping("/api/slots")
+public class TimeSlotController {
+    
+    @Autowired
+    private TimeSlotService timeSlotService;
+    
+    @GetMapping
+    public ResponseEntity<ApiResponse<?>> getSlots(
+        @RequestParam String date,
+        HttpServletRequest request
+    ) {
+        // 从请求上下文获取当前用户 ID（由拦截器注入）
+        Long userId = (Long) request.getAttribute("userId");
+        
+        LocalDate localDate = LocalDate.parse(date);
+        List<TimeSlotDto> slots = timeSlotService.getSlotsByDate(userId, localDate);
+        
+        return ResponseEntity.ok(ApiResponse.success("Slots retrieved", slots));
+    }
+}
+```
+
+### 13.2 数据隔离
+
 系统必须通过当前登录态识别用户。
 
 API 不应允许客户端直接传入 `userId` 来读写时间格数据。
@@ -1211,6 +1497,26 @@ API 不应允许客户端直接传入 `userId` 来读写时间格数据。
 - `POST /api/slots` 请求体中携带 `userId`
 - 允许用户覆盖其他用户的格子
 
+**数据隔离验证：**
+
+确保用户 A 无法通过猜测 ID 来查询或修改用户 B 的分类或时间块：
+
+```java
+// 正确：Service 层强制校验 userId
+public CategoryDto getCategory(Long userId, Long categoryId) {
+    Category category = categoryRepository.findByUserIdAndId(userId, categoryId)
+        .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+    return toDto(category);
+}
+
+// 错误：仅通过 categoryId 查询，可能泄露其他用户数据
+public CategoryDto getCategory(Long categoryId) {
+    Category category = categoryRepository.findById(categoryId)
+        .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+    return toDto(category);
+}
+```
+
 ## 14. 非目标
 
 当前阶段不处理以下能力：
@@ -1224,11 +1530,67 @@ API 不应允许客户端直接传入 `userId` 来读写时间格数据。
 - 被覆盖记录恢复。
 - 多时区复杂换算。
 
-## 15. UI 交互设计
+## 15. 设计总结
 
-### 15.1 登录页面原型
+### 15.1 核心设计决策
 
-#### 15.1.1 登录页面布局
+Interval 的核心设计是将时间记录问题简化为固定 96 格的状态管理问题。
+
+该设计带来的收益：
+
+- 数据模型简单。
+- 前后端契约清晰。
+- UI 渲染稳定。
+- 保存逻辑确定。
+- 覆盖行为可预期。
+- 数据库唯一约束能够直接保障核心一致性。
+
+核心不变量：
+
+```text
+For each userId + date + slotIndex, there is at most one TimeSlot.
+```
+
+该不变量应同时由业务逻辑与数据库唯一约束共同保证。
+
+### 15.2 智能删除与归档设计
+
+分类管理采用"智能删除"策略，平衡了数据安全和用户体验：
+
+**设计优势：**
+
+1. **自动判断**：系统根据历史记录自动选择物理删除或归档
+2. **数据安全**：有历史记录的分类不会被误删除
+3. **历史完整**：归档后历史记录依然可见且带标注
+4. **用户友好**：删除时自动提示受影响的记录数量
+5. **灵活重建**：归档后可创建同名的新分类
+
+**技术实现：**
+
+- 使用 `status` 枚举管理分类状态（ACTIVE / ARCHIVED）
+- TimeSlot 通过外键关联 Category，查询时 LEFT JOIN 获取实时状态
+- 前端根据 `categoryStatus` 自动拼接"(已归档)"标注
+- 性能可控：查询范围小（单日最多 96 条），JOIN 开销可接受
+
+**状态转换：**
+
+```text
+创建 → ACTIVE → 删除（无记录）→ 物理删除
+              → 删除（有记录）→ ARCHIVED → 可选：恢复 → ACTIVE
+```
+
+### 15.3 权限与数据隔离
+
+- JWT 拦截器校验所有非认证接口
+- Controller 从请求上下文获取 userId，不信任客户端传参
+- Service 层强制校验 userId，防止跨用户数据访问
+- 数据库外键约束 + 业务逻辑双重保障数据完整性
+
+## 16. UI 交互设计
+
+### 16.1 登录页面原型
+
+#### 16.1.1 登录页面布局
 
 登录页面采用居中卡片式设计，简洁清晰。
 
@@ -1255,7 +1617,7 @@ API 不应允许客户端直接传入 `userId` 来读写时间格数据。
 └─────────────────────────────────────┘
 ```
 
-#### 15.1.2 登录交互流程
+#### 16.1.2 登录交互流程
 
 ```mermaid
 sequenceDiagram
@@ -1276,7 +1638,7 @@ sequenceDiagram
     Note over U: 跳转到 96 格子主页
 ```
 
-#### 15.1.3 错误处理
+#### 16.1.3 错误处理
 
 登录失败时，在表单下方显示错误提示：
 
@@ -1290,13 +1652,13 @@ sequenceDiagram
 ❌ 网络连接失败，请检查网络后重试
 ```
 
-#### 15.1.4 原型文件
+#### 16.1.4 原型文件
 
 ```text
 docs/prototypes/login.html
 ```
 
-### 15.2 Time Grid 原型目标
+### 16.2 Time Grid 原型目标
 
 为了验证核心交互体验，我们在 `docs/prototypes/time-grid-v1.html` 中提供了一个高保真单文件原型。
 
@@ -1312,7 +1674,7 @@ docs/prototypes/login.html
 - 支持多用户切换模拟
 - 使用颜色区分不同分类的时间块
 
-### 15.3 时间网格布局：24 行 x 4 列
+### 16.3 时间网格布局：24 行 x 4 列
 
 每一行代表 1 小时，每一列代表 15 分钟。
 
@@ -1345,7 +1707,7 @@ docs/prototypes/login.html
 - 更容易多选连续时间段
 - 视觉上接近日历/时间轴
 
-### 15.4 核心交互模型：记录块（Record）
+### 16.4 核心交互模型：记录块（Record）
 
 用户保存的不是孤立的格子，而是一条完整的时间记录块。
 
@@ -1386,7 +1748,7 @@ docs/prototypes/login.html
 
 这个设计符合用户心智：**格子是可视化单位，记录块是语义单位**。
 
-### 15.5 格子状态与视觉反馈
+### 16.5 格子状态与视觉反馈
 
 每个格子有三种状态：
 
@@ -1412,7 +1774,7 @@ docs/prototypes/login.html
 
 当用户 hover 或点击某个格子时，同一记录块的所有格子会联动高亮，帮助用户识别时间块边界。
 
-### 15.6 点击与拖拽交互
+### 16.6 点击与拖拽交互
 
 #### 点击空白格子
 
@@ -1442,7 +1804,7 @@ docs/prototypes/login.html
 - 不允许直接覆盖，避免误操作
 - 用户需要先删除或编辑已有记录
 
-### 15.7 右侧面板三种状态
+### 16.7 右侧面板三种状态
 
 #### 状态 A：未选择（默认）
 
@@ -1496,7 +1858,7 @@ docs/prototypes/login.html
 
 点击「编辑记录」后切换为可编辑状态，允许修改分类和备注。
 
-### 13.7 多用户切换模拟
+### 16.8 多用户切换模拟
 
 右上角提供简单的用户切换功能，用于模拟多用户场景。
 
@@ -1513,7 +1875,7 @@ Alex   Mina   Kai
 
 原型中会预置少量示例记录，让用户能够直观感受多用户数据隔离效果。
 
-### 13.8 记录块边界识别
+### 16.9 记录块边界识别
 
 为了让用户清楚地识别哪些格子属于同一条记录，原型会提供以下视觉反馈：
 
@@ -1523,7 +1885,7 @@ Alex   Mina   Kai
 
 这样用户能明显感觉到「这是一个连续时间块」。
 
-### 13.9 时间显示规则
+### 16.10 时间显示规则
 
 每个格子对应一个 `slotIndex`：
 
@@ -1569,7 +1931,7 @@ endIndex 38 = 09:30
 所属时间块：09:00 - 09:30
 ```
 
-### 13.10 原型技术实现
+### 16.11 原型技术实现
 
 原型使用以下技术栈：
 
@@ -1607,7 +1969,7 @@ Vue 数据结构：
 - `switchUser(username)` - 切换用户
 - `formatTime(slotIndex)` - 格式化时间
 
-### 13.11 原型文件位置
+### 16.12 原型文件位置
 
 ```text
 docs/prototypes/time-grid-v1.html
@@ -1615,7 +1977,7 @@ docs/prototypes/time-grid-v1.html
 
 直接在浏览器中打开即可查看效果。
 
-### 13.12 设计验证目标
+### 16.13 设计验证目标
 
 通过该原型，我们希望验证：
 
@@ -1628,23 +1990,151 @@ docs/prototypes/time-grid-v1.html
 
 原型验证通过后，将作为前端实现的参考标准。
 
-## 14. 设计结论
+## 17. 附录：Repository 查询优化
 
-Interval 的核心设计是将时间记录问题简化为固定 96 格的状态管理问题。
+### 17.1 TimeSlotRepository
 
-该设计带来的收益：
-
-- 数据模型简单。
-- 前后端契约清晰。
-- UI 渲染稳定。
-- 保存逻辑确定。
-- 覆盖行为可预期。
-- 数据库唯一约束能够直接保障核心一致性。
-
-核心不变量：
-
-```text
-For each userId + date + slotIndex, there is at most one TimeSlot.
+```java
+@Repository
+public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
+    
+    /**
+     * 查询用户某日的所有时间块（带分类信息，避免 N+1 问题）
+     */
+    @EntityGraph(attributePaths = {"category"})
+    @Query("SELECT ts FROM TimeSlot ts WHERE ts.userId = :userId AND ts.date = :date ORDER BY ts.slotIndex")
+    List<TimeSlot> findByUserIdAndDateWithCategory(
+        @Param("userId") Long userId, 
+        @Param("date") LocalDate date
+    );
+    
+    /**
+     * 统计某个分类被使用的次数
+     */
+    @Query("SELECT COUNT(ts) FROM TimeSlot ts WHERE ts.category.id = :categoryId")
+    long countByCategoryId(@Param("categoryId") Long categoryId);
+    
+    /**
+     * 检查某个分类是否被使用
+     */
+    @Query("SELECT CASE WHEN COUNT(ts) > 0 THEN true ELSE false END FROM TimeSlot ts WHERE ts.category.id = :categoryId")
+    boolean existsByCategoryId(@Param("categoryId") Long categoryId);
+}
 ```
 
-该不变量应同时由业务逻辑与数据库唯一约束共同保证。
+### 17.2 CategoryRepository
+
+```java
+@Repository
+public interface CategoryRepository extends JpaRepository<Category, Long> {
+    
+    /**
+     * 查询用户的所有活跃分类
+     */
+    @Query("SELECT c FROM Category c WHERE c.userId = :userId AND c.status = 'ACTIVE' ORDER BY c.displayOrder")
+    List<Category> findActiveByUserId(@Param("userId") Long userId);
+    
+    /**
+     * 查询用户的某个分类（用于权限校验）
+     */
+    @Query("SELECT c FROM Category c WHERE c.userId = :userId AND c.id = :id")
+    Optional<Category> findByUserIdAndId(@Param("userId") Long userId, @Param("id") Long id);
+    
+    /**
+     * 检查用户是否已有同名的活跃分类
+     */
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Category c WHERE c.userId = :userId AND c.name = :name AND c.status = 'ACTIVE'")
+    boolean existsActiveByUserIdAndName(@Param("userId") Long userId, @Param("name") String name);
+    
+    /**
+     * 获取用户当前最大的 displayOrder（用于新建分类时自动排序）
+     */
+    @Query("SELECT COALESCE(MAX(c.displayOrder), -1) FROM Category c WHERE c.userId = :userId AND c.status = 'ACTIVE'")
+    Integer findMaxDisplayOrderByUserId(@Param("userId") Long userId);
+}
+```
+
+### 17.3 DTO 设计
+
+#### TimeSlotDto
+
+```java
+public record TimeSlotDto(
+    Integer slotIndex,
+    String activityName,
+    Long categoryId,
+    String categoryName,
+    String categoryColor,
+    String categoryStatus,
+    String displayName
+) {
+    public TimeSlotDto {
+        if (slotIndex == null || slotIndex < 0 || slotIndex > 95) {
+            throw new IllegalArgumentException("slotIndex must be between 0 and 95");
+        }
+        if (activityName == null || activityName.isBlank()) {
+            throw new IllegalArgumentException("activityName cannot be blank");
+        }
+        
+        // 自动计算 displayName
+        displayName = "ARCHIVED".equals(categoryStatus) 
+            ? categoryName + " (已归档)" 
+            : categoryName;
+    }
+    
+    /**
+     * 从 TimeSlot 实体转换为 DTO
+     */
+    public static TimeSlotDto fromEntity(TimeSlot timeSlot) {
+        Category category = timeSlot.getCategory();
+        return new TimeSlotDto(
+            timeSlot.getSlotIndex(),
+            timeSlot.getActivityName(),
+            category.getId(),
+            category.getName(),
+            category.getColorCode(),
+            category.getStatus().name(),
+            null // displayName 由构造器自动计算
+        );
+    }
+}
+```
+
+#### CategoryDto
+
+```java
+public record CategoryDto(
+    Long id,
+    String name,
+    String colorCode,
+    String status,
+    Integer displayOrder
+) {
+    public CategoryDto {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name cannot be blank");
+        }
+        if (colorCode == null || !colorCode.matches("^#[0-9a-fA-F]{6}$")) {
+            throw new IllegalArgumentException("colorCode must be a valid hex color");
+        }
+    }
+}
+```
+
+#### DeleteCategoryResponseDto
+
+```java
+public record DeleteCategoryResponseDto(
+    String action,        // "DELETED" | "ARCHIVED"
+    Long affectedRecords  // 受影响的历史记录数量
+) {
+    public DeleteCategoryResponseDto {
+        if (action == null || (!action.equals("DELETED") && !action.equals("ARCHIVED"))) {
+            throw new IllegalArgumentException("action must be DELETED or ARCHIVED");
+        }
+        if (affectedRecords == null || affectedRecords < 0) {
+            throw new IllegalArgumentException("affectedRecords must be non-negative");
+        }
+    }
+}
+```

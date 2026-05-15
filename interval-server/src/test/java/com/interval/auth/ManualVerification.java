@@ -1,5 +1,12 @@
 package com.interval.auth;
 
+import com.interval.auth.dto.LoginRequest;
+import com.interval.auth.dto.RegisterRequest;
+import com.interval.auth.exception.AuthenticationFailedException;
+import com.interval.auth.exception.PasswordValidationException;
+import com.interval.auth.exception.UserAlreadyExistsException;
+import com.interval.auth.util.PasswordValidator;
+
 /**
  * 手动测试验证程序
  * 

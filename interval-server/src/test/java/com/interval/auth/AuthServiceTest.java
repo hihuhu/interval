@@ -1,5 +1,16 @@
 package com.interval.auth;
 
+import com.interval.auth.dto.LoginResponseDto;
+import com.interval.auth.dto.RegisterResponseDto;
+import com.interval.auth.entity.User;
+import com.interval.auth.exception.AuthenticationFailedException;
+import com.interval.auth.exception.PasswordValidationException;
+import com.interval.auth.exception.UserAlreadyExistsException;
+import com.interval.auth.repository.UserRepository;
+import com.interval.auth.service.AuthServiceImpl;
+import com.interval.auth.util.JwtUtil;
+import com.interval.auth.util.PasswordValidator;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;

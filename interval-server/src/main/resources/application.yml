@@ -1,0 +1,38 @@
+# Application Configuration
+spring:
+  application:
+    name: interval-server
+  
+  # H2 Database Configuration
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  # JPA Configuration
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  
+  # H2 Console (for development)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# Server Configuration
+server:
+  port: 8088
+
+# JWT Configuration
+jwt:
+  secret: mySecretKeyForJWTTokenGenerationAndValidation1234567890
+  expiration: 86400000
+
+# Logging Configuration
+logging:
+  level:
+    com.interval: DEBUG

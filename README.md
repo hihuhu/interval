@@ -68,7 +68,38 @@ git pull origin main
 git checkout -b feat/your-change-name
 ```
 
-## Backend Initialization
+## Backend Setup
+
+### Package Structure
+
+The backend follows a **module + layer** structure:
+
+```
+com.interval/
+├── auth/           # Authentication module
+│   ├── entity/
+│   ├── repository/
+│   ├── service/
+│   ├── controller/
+│   ├── dto/
+│   ├── config/
+│   ├── exception/
+│   └── util/
+├── category/       # Category module
+│   ├── entity/
+│   ├── repository/
+│   ├── service/
+│   ├── controller/
+│   └── dto/
+├── timeslot/       # Time slot module
+│   ├── entity/
+│   └── repository/
+└── common/         # Common utilities
+    ├── dto/
+    └── exception/
+```
+
+### Running Tests
 
 From `interval-server/`:
 
@@ -77,13 +108,17 @@ cd interval-server
 gradle test
 ```
 
-If your environment includes the Gradle wrapper later, prefer:
+Or using your IDE:
+- **IntelliJ IDEA**: Right-click test class → Run
+- **VS Code**: Use Java Test Runner extension
+
+### Starting the Server
 
 ```bash
-./gradlew test
+gradle bootRun
 ```
 
-Then start the backend with your project-standard run command.
+The server will start at `http://localhost:8080`
 
 ## Frontend Initialization
 
