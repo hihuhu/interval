@@ -74,12 +74,12 @@ stateDiagram-v2
 **场景 A：无历史记录**
 - 检查：该分类从未在任何 TimeSlot 中使用
 - 操作：物理删除（从数据库移除）
-- 响应：`{ "action": "DELETED", "message": "分类已删除", "affectedRecords": 0 }`
+- 响应：`ApiResponse.data = { "action": "DELETED", "affectedRecords": 0 }`
 
 **场景 B：有历史记录**
 - 检查：存在 TimeSlot 引用该分类
 - 操作：归档（UPDATE status = 'ARCHIVED'）
-- 响应：`{ "action": "ARCHIVED", "message": "该分类已有 N 条记录，已自动归档", "affectedRecords": N }`
+- 响应：`ApiResponse.data = { "action": "ARCHIVED", "affectedRecords": N }`
 - 效果：
   - 分类在"新增时间块"下拉列表中消失
   - 历史记录回显时显示"工作 (已归档)"

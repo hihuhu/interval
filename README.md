@@ -1,13 +1,37 @@
 # Interval
 
-A monorepo containing the `Interval` backend and frontend applications.
+Interval 是一个前后端分离的时间块记录工具，基于“柳比歇夫时间记录法”：每天固定拆成 96 个 15 分钟格子，用户可以按分类记录、回顾自己的时间使用。
 
 ## Repository Structure
 
 - `interval-server/` — Spring Boot 3 backend using Java 17 and Gradle
-- `interval-client/` — Vue 3 frontend using TypeScript
-- `docs/design/` — system design and workflow documentation
+- `interval-client/` — Vue 3 frontend using TypeScript, Vite, Pinia, Vue Router and Axios
+- `docs/design/` — SDD/system design documents
 - `docs/prototypes/` — UI prototypes and reference materials
+
+## Current Features
+
+### Backend
+
+- User registration and login
+- BCrypt password hashing
+- JWT authentication and user context
+- Category CRUD with smart delete behavior
+- TimeSlot daily query, single-slot upsert and delete
+- User data isolation by authenticated JWT user
+- Standard JSON response wrapper: `ApiResponse<T>`
+- Global CORS for local Vue development
+
+### Frontend
+
+- Login and registration pages
+- JWT persistence and Axios Bearer token interceptor
+- Protected routes with Vue Router guards
+- Time Grid page with 96 slots
+- Category query, quick create, edit and smart delete result display
+- Single-slot create/edit/delete
+- Shift-click continuous range fill using existing TimeSlot upsert API
+- Vitest + Vue Test Utils coverage for services, stores, router and components
 
 ## Tech Stack
 
@@ -15,13 +39,22 @@ A monorepo containing the `Interval` backend and frontend applications.
 
 - Java 17
 - Spring Boot 3
+- Spring Web, Spring Data JPA, Spring Security, Spring Validation
+- H2 Database for local development and tests
+- JWT (`jjwt`)
+- Lombok
 - Gradle
+- JUnit 5
 
 ### Frontend
 
-- Vue 3
-- TypeScript
+- Vue 3 Composition API
+- TypeScript strict mode
 - Vite
+- Pinia
+- Vue Router 4
+- Axios
+- Vitest + Vue Test Utils + jsdom
 
 ## Development Workflow
 
@@ -30,127 +63,99 @@ This repository follows an SDD-first workflow:
 1. Update or create the relevant design document in `docs/design/`
 2. Write tests
 3. Implement the change
+4. Run validation
+5. Update `PROJECT_LOG.md`
 
-Do not skip the documentation-first step for features.
-
-## Recommended Branch Naming
-
-Create all work branches from `main`.
-
-Recommended pattern:
-
-`<type>/<scope>-<short-description>`
-
-Examples:
-
-- `feat/client-login-page`
-- `feat/server-user-api`
-- `docs/monorepo-setup-guide`
-- `fix/client-router-guard`
-- `chore/monorepo-cleanup`
-
-See `docs/design/monorepo-branching-and-initialization.md` for the full convention.
-
-## Initial Setup
-
-### 1. Clone the Repository
-
-```bash
-git clone git@github.com:hihuhu/interval.git
-cd interval
-```
-
-### 2. Create a Working Branch
-
-```bash
-git checkout main
-git pull origin main
-git checkout -b feat/your-change-name
-```
+Do not skip the documentation-first step for new features or non-trivial changes.
 
 ## Backend Setup
 
-### Package Structure
-
-The backend follows a **module + layer** structure:
-
-```
-com.interval/
-├── auth/           # Authentication module
-│   ├── entity/
-│   ├── repository/
-│   ├── service/
-│   ├── controller/
-│   ├── dto/
-│   ├── config/
-│   ├── exception/
-│   └── util/
-├── category/       # Category module
-│   ├── entity/
-│   ├── repository/
-│   ├── service/
-│   ├── controller/
-│   └── dto/
-├── timeslot/       # Time slot module
-│   ├── entity/
-│   └── repository/
-└── common/         # Common utilities
-    ├── dto/
-    └── exception/
-```
-
-### Running Tests
-
 From `interval-server/`:
+
+```bash
+gradle test
+gradle bootRun
+```
+
+The backend starts at:
+
+```text
+http://localhost:8088
+```
+
+H2 console:
+
+```text
+http://localhost:8088/h2-console
+```
+
+H2 JDBC URL:
+
+```text
+jdbc:h2:mem:testdb
+```
+
+If the Gradle wrapper cannot download its distribution on Windows, use an installed system Gradle as a fallback:
+
+```bash
+gradle test
+gradle bootRun
+```
+
+## Frontend Setup
+
+From `interval-client/`:
+
+```bash
+npm install
+npm run test
+npm run build
+npm run dev
+```
+
+The local frontend dev server starts at:
+
+```text
+http://localhost:5173
+```
+
+Configure the backend URL via `.env`:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8088
+```
+
+Use `interval-client/.env.example` as the template.
+
+## Useful Validation Commands
+
+Backend:
 
 ```bash
 cd interval-server
 gradle test
 ```
 
-Or using your IDE:
-- **IntelliJ IDEA**: Right-click test class → Run
-- **VS Code**: Use Java Test Runner extension
-
-### Starting the Server
-
-```bash
-gradle bootRun
-```
-
-The server will start at `http://localhost:8080`
-
-## Frontend Initialization
-
-From `interval-client/`:
+Frontend:
 
 ```bash
 cd interval-client
-npm install
 npm run test
-npm run dev
+npm run build
 ```
 
-## Environment Notes
+## Local End-to-End Flow
 
-- Keep local secrets in `.env` files that are not committed
-- Configure the frontend API base URL through environment variables
-- Do not hardcode backend service URLs in client code
-
-## First Contribution Checklist
-
-Before coding:
-
-- pull the latest `main`
-- create a topic branch
-- add or update the design doc in `docs/design/`
-- add tests before implementation
-
-Before opening a PR:
-
-- ensure the change is focused
-- ensure tests pass
-- ensure docs are updated together with code
+1. Start backend: `gradle bootRun` from `interval-server/`
+2. Start frontend: `npm run dev` from `interval-client/`
+3. Open `http://localhost:5173`
+4. Register a new user
+5. Login
+6. Create or edit categories
+7. Click a single time slot to create/edit a record
+8. Shift-click a second slot to fill a continuous range
+9. Delete a time slot
+10. Delete a category and observe `DELETED` or `ARCHIVED` smart delete result
 
 ## Git Convention
 
@@ -158,13 +163,7 @@ Use Conventional Commits.
 
 Examples:
 
-- `feat: add booking module skeleton`
-- `docs: add monorepo onboarding guide`
-- `fix: correct client api base url handling`
-- `test: add user service tests`
-
-## Current Status
-
-This repository is initialized and connected to GitHub at:
-
-- `git@github.com:hihuhu/interval.git`
+- `feat: add time grid range fill`
+- `fix: correct category smart delete display`
+- `test: add category store tests`
+- `docs: update quick start status`

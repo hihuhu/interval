@@ -2,12 +2,15 @@ package com.interval.category.controller;
 
 import com.interval.category.dto.CategoryDto;
 import com.interval.category.dto.CreateCategoryRequest;
+import com.interval.category.dto.DeleteCategoryResponseDto;
 import com.interval.category.dto.UpdateCategoryRequest;
 import com.interval.category.service.CategoryService;
 import com.interval.common.dto.ApiResponse;
+import com.interval.auth.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,8 +21,8 @@ import java.util.List;
  * 分类管理 REST API 控制器。
  * 提供分类的 CRUD 操作接口。
  * 
- * 所有接口都需要认证，userId 从 JWT token 中提取。
- * 目前为了测试方便，暂时使用 @RequestHeader 接收 userId。
+ * 所有接口都需要认证，用户 ID 从 JWT token 中提取。
+ * 当前认证用户由 Spring Security 注入。
  */
 @RestController
 @RequestMapping("/api/categories")
@@ -34,14 +37,14 @@ public class CategoryController {
     /**
      * 获取当前用户的所有分类
      * 
-     * @param userId 用户 ID（从 JWT token 中提取，暂时用 header）
+     * @param user 当前认证用户
      * @return 分类列表
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<CategoryDto>>> getUserCategories(
-            @RequestHeader("X-User-Id") Long userId) {
+            @AuthenticationPrincipal AuthenticatedUser user) {
         try {
-            List<CategoryDto> categories = categoryService.getActiveCategories(userId);
+            List<CategoryDto> categories = categoryService.getActiveCategories(user.userId());
             return ResponseEntity.ok(ApiResponse.success("Categories retrieved successfully", categories));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -52,17 +55,17 @@ public class CategoryController {
     /**
      * 创建新分类
      * 
-     * @param userId 用户 ID（从 JWT token 中提取，暂时用 header）
+     * @param user 当前认证用户
      * @param request 创建分类请求
      * @return 创建的分类
      */
     @PostMapping
     public ResponseEntity<ApiResponse<CategoryDto>> createCategory(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody CreateCategoryRequest request) {
         try {
             CategoryDto category = categoryService.createCategory(
-                    userId, 
+                    user.userId(), 
                     request.name(), 
                     request.colorCode()
             );
@@ -80,19 +83,19 @@ public class CategoryController {
     /**
      * 更新分类
      * 
-     * @param userId 用户 ID（从 JWT token 中提取，暂时用 header）
+     * @param user 当前认证用户
      * @param categoryId 分类 ID
      * @param request 更新分类请求
      * @return 更新后的分类
      */
     @PutMapping("/{categoryId}")
     public ResponseEntity<ApiResponse<CategoryDto>> updateCategory(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal AuthenticatedUser user,
             @PathVariable Long categoryId,
             @Valid @RequestBody UpdateCategoryRequest request) {
         try {
             CategoryDto category = categoryService.updateCategory(
-                    userId,
+                    user.userId(),
                     categoryId,
                     request.name(),
                     request.colorCode(),
@@ -111,17 +114,17 @@ public class CategoryController {
     /**
      * 删除分类
      * 
-     * @param userId 用户 ID（从 JWT token 中提取，暂时用 header）
+     * @param user 当前认证用户
      * @param categoryId 分类 ID
      * @return 删除结果
      */
     @DeleteMapping("/{categoryId}")
-    public ResponseEntity<ApiResponse<Void>> deleteCategory(
-            @RequestHeader("X-User-Id") Long userId,
+    public ResponseEntity<ApiResponse<DeleteCategoryResponseDto>> deleteCategory(
+            @AuthenticationPrincipal AuthenticatedUser user,
             @PathVariable Long categoryId) {
         try {
-            categoryService.deleteCategory(userId, categoryId);
-            return ResponseEntity.ok(ApiResponse.success("Category deleted successfully", null));
+            DeleteCategoryResponseDto result = categoryService.deleteCategory(user.userId(), categoryId);
+            return ResponseEntity.ok(ApiResponse.success("Category deleted successfully", result));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ApiResponse<>("ERROR", e.getMessage(), null));

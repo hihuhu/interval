@@ -4,6 +4,463 @@
 
 ---
 
+## [2026-05-17] 分类管理与 Time Grid 范围填充完成
+
+### 📋 本次目标
+- 按既定计划继续完成 Interval 项目剩余工作：验证当前基线、完成端到端冒烟、补齐分类编辑/智能删除 UI、增强 Time Grid 多选填充体验，并同步文档。
+
+### ✅ 已完成操作
+- ✅ 运行前端测试，确认原有 16 个测试通过。
+- ✅ 运行前端生产构建，确认 `vue-tsc` 与 Vite build 通过。
+- ✅ 运行后端 `gradle test`，确认全量测试通过。
+- ✅ 确认后端 `8088` 与前端 `5173` 服务可访问。
+- ✅ 使用真实后端 API 完成注册、登录、分类创建、TimeSlot 创建、覆盖编辑、每日查询、删除的端到端冒烟验证。
+- ✅ 新增 `docs/design/sdd-frontend-category-range-extension.md`，覆盖分类管理 UI 与 Time Grid 范围填充扩展设计。
+- ✅ 新增 `useCategoryStore` 测试，覆盖分类更新和智能删除本地状态变化。
+- ✅ 扩展前端分类类型、服务层和 Pinia store，支持 `PUT /api/categories/{id}` 与 `DELETE /api/categories/{id}`。
+- ✅ 在 `TimeGridView` 新增分类管理面板，支持编辑分类名称/颜色、删除分类、展示 `DELETED` / `ARCHIVED` 结果。
+- ✅ 新增 TimeSlot store 范围保存测试，并实现 `upsertSlotRange`。
+- ✅ 新增 slot range helper 测试，并实现 `slotIndexRange`。
+- ✅ 扩展 `TimeGrid` / `TimeSlotCell`，支持先点击起点再 Shift-click 终点选择连续范围。
+- ✅ 扩展 `SlotEditorModal`，支持显示范围摘要并提交多格 payload。
+- ✅ 更新 `README.md` 和 `QUICK_START.md`，同步当前功能、端口、命令和联调流程。
+- ✅ 删除临时后端启动日志文件。
+
+### 🔧 技术决策
+- **决策**：分类管理 UI 暂时内聚在 `TimeGridView`，不立即抽取独立 `CategoryManager.vue`。
+- **原因**：当前分类管理只包含小范围编辑/删除能力，内聚在页面中可减少组件通信复杂度。
+- **影响**：后续若加入排序、恢复归档、批量管理，再抽取独立组件。
+
+- **决策**：Time Grid 范围填充复用现有单格 `PUT /api/time-slots`，由前端循环提交。
+- **原因**：避免在 UX 尚未完全稳定前新增后端批量 API，降低联调和回归风险。
+- **影响**：小范围填充足够使用；若后续需要大范围高频操作，可再设计后端批量接口。
+
+- **决策**：范围选择使用“先点击起点，再 Shift-click 终点”的交互。
+- **原因**：实现简单、用户熟悉、易测试，也避免拖拽选择在移动端和嵌套按钮中的复杂事件问题。
+- **影响**：当前可以完成连续格批量填充；完整拖拽体验可作为后续增强。
+
+### ⚠️ 遇到的问题
+- 后端启动时发现 `8088` 已被已有进程占用，确认既有后端实例可访问后复用该实例完成冒烟验证。
+- Cursor 浏览器环境当前只支持导航，不支持页面快照读取，因此端到端验证采用真实 HTTP API 冒烟方式完成。
+- PowerShell JSON 字符串转义在本地编码下失败，已改用 Node `fetch` 脚本完成 API 冒烟验证。
+- 既有 `SlotEditorModal` 测试因新增 `slotIndexes` payload 字段失败，已同步更新测试并补充范围摘要测试。
+
+### 📝 下次待办
+- [ ] 如需进一步提升性能，设计后端批量 TimeSlot API 替代前端循环 upsert。
+- [ ] 增加分类排序 UI 与归档分类恢复能力。
+- [ ] 增加统计视图（日/周/月报表）。
+- [ ] 为生产部署补充 CORS 域名、JWT 密钥和环境变量说明。
+- [ ] 整理 git diff，并按功能拆分提交。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `README.md`
+- `QUICK_START.md`
+- `docs/design/sdd-frontend-category-range-extension.md`
+- `interval-client/src/types/category.ts`
+- `interval-client/src/services/categoryService.ts`
+- `interval-client/src/stores/useCategoryStore.ts`
+- `interval-client/src/stores/useTimeSlotStore.ts`
+- `interval-client/src/composables/useTimeSlots.ts`
+- `interval-client/src/views/TimeGridView.vue`
+- `interval-client/src/components/TimeGrid.vue`
+- `interval-client/src/components/TimeSlotCell.vue`
+- `interval-client/src/components/SlotEditorModal.vue`
+- `interval-client/src/__tests__/useCategoryStore.test.ts`
+- `interval-client/src/__tests__/useTimeSlotStore.test.ts`
+- `interval-client/src/__tests__/timeSlotHelpers.test.ts`
+- `interval-client/src/__tests__/TimeGrid.test.ts`
+- `interval-client/src/__tests__/SlotEditorModal.test.ts`
+
+---
+
+## [2026-05-17] 前端实现收尾与联调准备完成
+
+### 📋 本次目标
+- 在中断后继续完成 Interval 项目，打通前端 Vue 客户端与后端 JWT API 的端到端闭环，并修复阻塞测试/构建的问题。
+
+### ✅ 已完成操作
+- ✅ 检查 `interval-client` 实现状态，确认 Vue 3 + Pinia + Router + Time Grid 主体代码已就绪。
+- ✅ 运行前端 `npm run test`，定位并修复路由守卫测试失败（认证态需与 `localStorage` 同步）。
+- ✅ 修复 `tsconfig.json` TypeScript 6 `baseUrl` 弃用导致的 `vue-tsc` 失败。
+- ✅ 补充 `env.d.ts` 中 `ImportMetaEnv` 与 `*.css` 模块声明，修复构建类型错误。
+- ✅ 修复 Axios 响应拦截器返回类型，使 `npm run build` 通过。
+- ✅ 新增 `interval-client/.env`（本地开发，已 gitignore）指向 `http://localhost:8088`。
+- ✅ 新增后端 `WebConfig` 全局 CORS，允许 Vite 开发服务器 `5173` 访问 `/api/**`。
+- ✅ 更新 `SecurityConfig` 启用 `.cors(Customizer.withDefaults())`。
+- ✅ 401 响应时清除 token 并重定向登录页。
+- ✅ 运行前端测试 16/16 通过、前端生产构建成功。
+- ✅ 使用系统 Gradle + JDK 17 运行后端全量测试通过。
+- ✅ 启动后端服务（8088）并完成注册/登录/分类创建 HTTP 冒烟验证。
+
+### 🔧 技术决策
+- **决策**：路由守卫测试通过写入 `localStorage` 模拟已登录态，而非仅 `$patch` Pinia。
+- **原因**：`restoreSession()` 在导航时从 `localStorage` 恢复 token，与真实登录流程一致。
+- **影响**：测试更贴近生产行为，避免守卫误判未登录。
+
+- **决策**：后端端口保持 `8088`（`application.yml`），前端 `.env` 与之对齐。
+- **原因**：项目已配置 8088，`.env.example` 原本即指向该端口。
+- **影响**：本地联调需先启动 `interval-server`，再 `npm run dev`。
+
+- **决策**：CORS 仅放行 `localhost:5173` 与 `127.0.0.1:5173`。
+- **原因**：满足前后端分离开发，避免过宽来源。
+- **影响**：生产部署需按实际前端域名补充 CORS 配置。
+
+### ⚠️ 遇到的问题
+- PowerShell 不支持 `&&` 链式命令，已改为 `;` 分隔执行。
+- `gradlew.bat` 下载 Gradle 分发包超时；本机可用 `F:\app\gradle-9.5.1\bin\gradle.bat` 代替。
+- 冒烟脚本中 PowerShell 字符串拼接导致 TimeSlot PUT 请求未成功，但注册/登录/分类 API 已验证可用。
+
+### 📝 下次待办
+- [ ] 本地同时启动后端与 `interval-client`（`npm run dev`），浏览器端到端验证 Time Grid 创建/删除。
+- [ ] 如需提交，整理本轮前后端变更并按功能拆分 commit。
+- [ ] 补充分类编辑/智能删除 UI、拖拽多选等 SDD 范围外增强。
+- [ ] 解决 Gradle Wrapper 网络下载超时，或文档注明使用系统 Gradle 的备用方式。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `interval-client/tsconfig.json`
+- `interval-client/src/env.d.ts`
+- `interval-client/src/__tests__/router.test.ts`
+- `interval-client/src/services/http.ts`
+- `interval-client/.env`
+- `interval-server/src/main/java/com/interval/common/config/WebConfig.java`
+- `interval-server/src/main/java/com/interval/auth/config/SecurityConfig.java`
+
+---
+
+## [2026-05-16] 前端认证与 Time Grid 基础架构 SDD 完成
+
+### 📋 本次目标
+- 在后端 JWT 与 TimeSlot API 稳定后，按前端 SDD 工作流启动 Vue 前端实现前的设计阶段。
+
+### ✅ 已完成操作
+- ✅ 检查 `interval-client` 目录，确认当前仅有前端规则文件，尚未初始化 Vue 项目主体。
+- ✅ 阅读前端 `.cursorrules` 与 `.cursor/rules`，确认前端要求“先 SDD、用户批准后再测试和实现”。
+- ✅ 阅读现有登录与 Time Grid 原型，提取 UI/UX 方向与功能范围。
+- ✅ 新增 `docs/design/sdd-frontend-auth-time-grid.md`，覆盖项目结构、API 集成、组件架构、Pinia 状态、路由守卫、UI/UX、测试策略与验收标准。
+- ✅ 明确前端第一版范围：注册、登录、JWT 保存、Axios Bearer token、受保护路由、分类查询/新建、TimeSlot 查询/创建/删除、96 格基础 Time Grid。
+
+### 🔧 技术决策
+- **决策**：前端第一版使用 Vue 3 + TypeScript + Vite + Pinia + Vue Router + Axios + Vitest。
+- **原因**：与项目既定技术栈和前端规则一致，便于建立可测试的前后端分离架构。
+- **影响**：后续实现需初始化完整 Vite 项目，并通过 `npm run test` / `npm run build` 验证。
+
+- **决策**：Time Grid 第一版优先实现点击单格创建/编辑，不做拖拽多选和批量保存。
+- **原因**：后端当前 API 是单格 upsert，先完成端到端闭环可降低复杂度。
+- **影响**：拖拽多选和批量保存作为后续增强。
+
+- **决策**：分类管理第一版只做查询和新建。
+- **原因**：Time Grid 创建 TimeSlot 只依赖可用分类列表和新建分类能力；编辑/智能删除 UI 可独立迭代。
+- **影响**：后续需补完整分类管理弹窗以调用更新与智能删除接口。
+
+### ⚠️ 遇到的问题
+- 前端规则明确要求 SDD 必须等待用户批准后才能实现，因此本次未写 Vue 实现代码。
+- 首次写入 SDD 内容过长超过工具单次写入限制，已压缩为聚焦版本后成功保存。
+
+### 📝 下次待办
+- [ ] 等待用户明确批准 `docs/design/sdd-frontend-auth-time-grid.md`。
+- [ ] 批准后初始化 Vue/Vite 项目与依赖。
+- [ ] 按 SDD 顺序先写 Vitest 测试，再实现 service、store、router、组件与页面。
+- [ ] 运行 `npm install`、`npm run test`、`npm run build` 并做后端联调验证。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `docs/design/sdd-frontend-auth-time-grid.md`
+
+---
+
+## [2026-05-16] JWT 用户上下文集成完成
+
+### 📋 本次目标
+- 继续推进项目，将 Category 与 TimeSlot API 从临时 `X-User-Id` Header 迁移到 JWT `Authorization: Bearer <token>` 用户上下文。
+
+### ✅ 已完成操作
+- ✅ 阅读现有认证模块、`SecurityConfig`、`JwtUtil`、Category/TimeSlot Controller 与相关测试。
+- ✅ 新增 `docs/design/sdd-jwt-user-context.md`，定义 JWT 用户上下文架构、API 契约、错误响应、测试策略与验收标准。
+- ✅ 新增 `JwtUtilTest`，覆盖 token 校验、用户名与用户 ID 解析。
+- ✅ 新增 `JwtSecurityIntegrationTest`，覆盖无 token、非法 token、有效 token、用户不存在、注册接口公开访问等安全场景。
+- ✅ 新增 `AuthenticatedUser` 作为 Spring Security principal。
+- ✅ 新增 `JwtAuthenticationFilter`，从 Bearer token 解析用户 ID/用户名，校验用户存在，并写入 `SecurityContext`。
+- ✅ 更新 `SecurityConfig`，公开 `/api/auth/register`、`/api/auth/login`、`/h2-console/**`，其余接口要求认证，并注册 JWT 过滤器。
+- ✅ 扩展 `JwtUtil`，支持 `getUserIdFromToken` 并复用 claims 解析。
+- ✅ 迁移 `CategoryController` 与 `TimeSlotController`，移除 `X-User-Id` 读取，改为 `@AuthenticationPrincipal AuthenticatedUser`。
+- ✅ 更新 `CategoryControllerTest`，通过 Bearer token 与 mock JWT 依赖验证智能删除响应。
+- ✅ 运行 JWT/控制器定向测试通过。
+- ✅ 运行完整后端测试 `gradle test` 通过。
+- ✅ 重启后端并完成 HTTP 验证：无 token 返回 401；注册/登录后使用 Bearer token 创建分类、创建/查询/删除 TimeSlot 均成功，且不再需要 `X-User-Id`。
+- ✅ 检查 JWT 相关修改文件诊断，无 linter 错误。
+
+### 🔧 技术决策
+- **决策**：受保护 API 统一使用 `Authorization: Bearer <token>`，不再读取 `X-User-Id`。
+- **原因**：`X-User-Id` 可由客户端伪造，不能作为真实身份来源；JWT 已在登录阶段生成，适合作为前后端分离 API 的无状态认证凭证。
+- **影响**：Category 与 TimeSlot API 调用方必须先登录获取 token；前端服务层后续需要在 Axios 拦截器中附加 Bearer token。
+
+- **决策**：Service 层方法签名继续显式接收 `Long userId`，不直接依赖 Spring Security 上下文。
+- **原因**：保持业务层与 Web/Security 框架解耦，现有用户数据隔离逻辑和服务测试无需大范围重写。
+- **影响**：Controller 负责把认证 principal 转为 `userId`，Service 继续执行归属校验与业务规则。
+
+- **决策**：JWT 过滤器校验 token 中的 `userId` 对应用户仍存在。
+- **原因**：避免已删除用户持有旧 token 后继续访问接口。
+- **影响**：用户不存在时返回 401，消息为 `Authenticated user not found`。
+
+- **决策**：认证失败由 JWT 过滤器直接写出标准 `ApiResponse.error(...)` JSON。
+- **原因**：过滤器阶段早于 Controller，不能依赖 Controller 的 try/catch；直接写出可保证认证错误响应格式统一。
+- **影响**：缺失 token 返回 `Authentication required`，非法或过期 token 返回 `Invalid or expired token`。
+
+### ⚠️ 遇到的问题
+- 中断发生在 `CategoryControllerTest` 认证注入方式调整过程中；恢复后重新读取文件确认状态并继续修复。
+- `@AuthenticationPrincipal` 在禁用过滤器的切片测试中无法从 `.with(authentication(...))` 正确注入，导致 Controller 收到 null principal；已改为走真实 JWT 过滤器并 mock `JwtUtil` / `UserRepository`。
+- `JwtAuthenticationFilter.shouldNotFilter` 初版使用 `getServletPath()`，在 MockMvc 场景下对公开接口判断不稳定，导致注册接口被误拦截；已改为基于 `getRequestURI()` 和 context path 计算路径。
+- Gradle 输出仍包含 Gradle 10 兼容性弃用警告，当前不影响构建与测试通过。
+
+### 📝 下次待办
+- [ ] 更新前端 API 服务设计，登录后保存 token 并通过 Axios 拦截器附加 `Authorization: Bearer <token>`。
+- [ ] 更新或新增前端 SDD，覆盖认证状态、路由守卫、HTTP 拦截器与 Time Grid API 调用。
+- [ ] 后续可考虑补充 token 过期前端处理、刷新 token、登出与生产环境密钥管理。
+- [ ] 如需提交代码，整理本轮与前序 TimeSlot/Gradle wrapper 变更，按功能拆分提交。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `docs/design/sdd-jwt-user-context.md`
+- `interval-server/src/main/java/com/interval/auth/config/SecurityConfig.java`
+- `interval-server/src/main/java/com/interval/auth/security/AuthenticatedUser.java`
+- `interval-server/src/main/java/com/interval/auth/security/JwtAuthenticationFilter.java`
+- `interval-server/src/main/java/com/interval/auth/util/JwtUtil.java`
+- `interval-server/src/main/java/com/interval/category/controller/CategoryController.java`
+- `interval-server/src/main/java/com/interval/timeslot/controller/TimeSlotController.java`
+- `interval-server/src/test/java/com/interval/auth/JwtUtilTest.java`
+- `interval-server/src/test/java/com/interval/auth/JwtSecurityIntegrationTest.java`
+- `interval-server/src/test/java/com/interval/category/CategoryControllerTest.java`
+
+---
+
+## [2026-05-16] TimeSlot HTTP 验证与 Category 智能删除响应修复
+
+### 📋 本次目标
+- 继续推进 TimeSlot 后端验证，修复 `CategoryController.deleteCategory` 丢弃智能删除结果的问题，并评估 JWT 集成下一步范围。
+
+### ✅ 已完成操作
+- ✅ 启动后端服务并使用真实 HTTP 请求验证 TimeSlot API。
+- ✅ 通过 HTTP 验证分类创建、TimeSlot 保存、每日查询、同格覆盖、删除、删除后查询为空等流程。
+- ✅ 先更新 `docs/design/system-design.md` 中分类智能删除响应说明，明确 `DeleteCategoryResponseDto` 位于 `ApiResponse.data`。
+- ✅ 新增 `CategoryControllerTest`，覆盖删除分类时 Controller 应返回智能删除结果。
+- ✅ 先运行新增测试确认当前实现失败，再修复 `CategoryController.deleteCategory` 返回类型与响应体。
+- ✅ 重启后端后通过 HTTP 验证分类删除：有历史记录返回 `ARCHIVED` 与影响记录数，无历史记录返回 `DELETED` 与 `0`。
+- ✅ 运行定向回归测试与完整后端测试，均通过。
+- ✅ 检查修改文件诊断，无 linter 错误。
+- ✅ 评估 JWT 集成现状，确认已有 token 生成，但尚缺请求过滤器、用户上下文与控制器替换方案。
+
+### 🔧 技术决策
+- **决策**：`DELETE /api/categories/{categoryId}` 保持成功消息不变，但将 `DeleteCategoryResponseDto` 放入 `ApiResponse.data` 返回。
+- **原因**：Service 已经根据历史记录数量区分 `DELETED` 与 `ARCHIVED`，Controller 丢弃该 DTO 会让前端无法向用户解释实际删除结果。
+- **影响**：前端可根据 `data.action` 和 `data.affectedRecords` 展示“已删除”或“已归档并保留历史记录”的提示；现有调用仍保持 `result/message` 包装格式。
+
+- **决策**：JWT 集成不在本次直接实现，作为下一项独立 SDD 工作推进。
+- **原因**：该变更会影响 Category、TimeSlot 等所有需要用户上下文的接口，涉及认证过滤器、错误响应、测试和前端调用方式，属于非平凡业务变更。
+- **影响**：当前 API 继续使用临时 `X-User-Id` Header；下一步应先编写并确认 JWT 用户上下文 SDD，再按测试优先方式替换。
+
+### ⚠️ 遇到的问题
+- `@WebMvcTest` 默认未加载项目 `SecurityConfig`，DELETE 请求在测试中因 CSRF 返回 403；已通过 `@Import(SecurityConfig.class)` 让测试环境与应用安全配置一致。
+- PowerShell 终端对中文 JSON 内容显示为问号或乱码，但英文验证数据、响应结构和测试结果正常。
+- 重启前的后端进程仍运行旧代码，首次 HTTP 验证分类删除仍返回 `data: null`；重启服务后验证通过。
+
+### 📝 下次待办
+- [ ] 为 JWT 用户上下文替换 `X-User-Id` 编写 SDD，并等待确认后实现。
+- [ ] JWT SDD 中明确 `Authorization: Bearer <token>`、过滤器、当前用户解析、401/403 响应与测试策略。
+- [ ] JWT 集成后同步更新 Category/TimeSlot API 文档和前端服务调用约定。
+- [ ] 后端认证与时间格接口稳定后，开始 Vue 前端基础架构与 Time Grid 页面。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `docs/design/system-design.md`
+- `interval-server/src/main/java/com/interval/category/controller/CategoryController.java`
+- `interval-server/src/test/java/com/interval/category/CategoryControllerTest.java`
+
+---
+
+## [2026-05-16] TimeSlot 后端模块 TDD 实现完成
+
+### 📋 本次目标
+- 在用户确认 TimeSlot SDD 后，按“先测试、后实现”的流程完成 TimeSlot 后端模块，并修复现有测试阻塞。
+
+### ✅ 已完成操作
+- ✅ 按当前 Category 实现重写 `CategoryServiceTest`，修复旧测试引用不存在方法导致的编译失败。
+- ✅ 为 `CategorySmartDeleteTest` 补充 `CategoryStatus` 导入。
+- ✅ 运行完整后端测试，确认基础测试环境恢复可用。
+- ✅ 新增 `TimeSlotServiceTest`，覆盖每日查询、新建、覆盖、slotIndex 边界、分类归属、归档分类拒绝、删除权限等场景。
+- ✅ 新增 `TimeSlotIntegrationTest`，覆盖 H2 集成环境中的创建查询、覆盖写入、多用户隔离、归档分类回显、删除隔离。
+- ✅ 先运行 TimeSlot 测试确认未实现状态下失败，随后实现代码。
+- ✅ 新增 TimeSlot DTO、Service 接口、ServiceImpl、Controller。
+- ✅ 扩展 `TimeSlotRepository`，增加按用户和日期查询、按唯一格查询、按用户和 ID 查询，并使用 `@EntityGraph` 加载分类避免 N+1。
+- ✅ 运行 TimeSlot 测试通过。
+- ✅ 运行完整后端测试通过。
+
+### 🔧 技术决策
+- **决策**：TimeSlot 写入使用 `PUT /api/time-slots` 执行 upsert/覆盖语义。
+- **原因**：系统设计中同一用户、同一天、同一 slotIndex 最多一条记录，重复保存应覆盖旧数据。
+- **影响**：前端无需处理重叠时间段，只需按格子保存。
+
+- **决策**：TimeSlot API 暂时继续使用 `X-User-Id` Header 获取用户 ID。
+- **原因**：当前 Category API 仍采用临时 Header 方案，JWT 全量集成属于后续独立工作。
+- **影响**：TimeSlot 与现有后端接口保持一致；后续 JWT 集成时可统一替换用户上下文来源。
+
+- **决策**：历史 TimeSlot 查询允许回显 `ARCHIVED` 分类，但保存新 TimeSlot 时拒绝使用归档分类。
+- **原因**：既保护历史记录可读性，又防止用户继续选择已删除/归档分类。
+- **影响**：分类智能删除后，旧记录显示“分类名 (已归档)”，新增记录只能选择 ACTIVE 分类。
+
+### ⚠️ 遇到的问题
+- 旧版 `CategoryServiceTest` 与当前 Category 智能删除实现不一致，引用了不存在的 Repository/Service 方法。
+- TimeSlot 测试中的中文在终端编译错误输出里显示乱码，但源码和测试执行不受影响。
+- Gradle 9.5.1 输出 Gradle 10 兼容性弃用警告，当前不影响测试通过。
+
+### 📝 下次待办
+- [ ] 手动启动后端服务，使用 HTTP 请求验证 TimeSlot API。
+- [ ] 修复或改进 `CategoryController.deleteCategory` 返回值，使其返回智能删除结果 `DeleteCategoryResponseDto`，与 Service 行为一致。
+- [ ] 集成 JWT 用户上下文，替换 `X-User-Id` 临时方案。
+- [ ] 后端稳定后，开始 Vue 前端基础架构与 Time Grid 页面。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `interval-server/src/test/java/com/interval/category/CategoryServiceTest.java`
+- `interval-server/src/test/java/com/interval/category/CategorySmartDeleteTest.java`
+- `interval-server/src/test/java/com/interval/timeslot/TimeSlotServiceTest.java`
+- `interval-server/src/test/java/com/interval/timeslot/TimeSlotIntegrationTest.java`
+- `interval-server/src/main/java/com/interval/timeslot/dto/TimeSlotDto.java`
+- `interval-server/src/main/java/com/interval/timeslot/dto/UpsertTimeSlotRequest.java`
+- `interval-server/src/main/java/com/interval/timeslot/dto/DeleteTimeSlotResponseDto.java`
+- `interval-server/src/main/java/com/interval/timeslot/repository/TimeSlotRepository.java`
+- `interval-server/src/main/java/com/interval/timeslot/service/TimeSlotService.java`
+- `interval-server/src/main/java/com/interval/timeslot/service/TimeSlotServiceImpl.java`
+- `interval-server/src/main/java/com/interval/timeslot/controller/TimeSlotController.java`
+
+---
+
+## [2026-05-16] 修复后端 Java/Gradle 环境并复现测试编译问题
+
+### 📋 本次目标
+- 解决本机已安装 Java/Gradle 但项目测试无法运行的问题，让后端测试至少能够进入 Gradle/JUnit 编译流程。
+
+### ✅ 已完成操作
+- ✅ 检查 `F:\app` 下已安装的 Java 与 Gradle，确认存在 `gradle-9.5.1` 和 JDK 25。
+- ✅ 检查当前终端环境，确认 PATH 实际优先使用 Oracle Java 8，且未识别 `F:\app\gradle-9.5.1\bin`。
+- ✅ 使用临时环境变量验证 `F:\app\gradle-9.5.1` 可正常启动。
+- ✅ 发现项目 `build.gradle` 使用 Java 17 toolchain，当前机器缺少 JDK 17，导致 Gradle 无法找到匹配 toolchain。
+- ✅ 尝试用 JDK 25 编译，定位到 Lombok 在 JDK 25 下触发 `ExceptionInInitializerError`，确认不能用 JDK 25 替代项目要求的 Java 17。
+- ✅ 使用 winget 将 Eclipse Temurin JDK 17 安装到 `F:\app\jdk-17.0.19+10`。
+- ✅ 将用户级环境变量 `JAVA_HOME` 设置为 `F:\app\jdk-17.0.19+10`，`GRADLE_HOME` 设置为 `F:\app\gradle-9.5.1`，并把二者的 `bin` 加入用户 PATH。
+- ✅ 使用 JDK 17 + Gradle 9.5.1 运行 `gradle test`，主代码 `compileJava` 已通过，测试编译阶段进入真实代码问题。
+- ✅ 生成 `interval-server` Gradle Wrapper 脚本与配置文件。
+- ✅ 修改 `.gitignore`，允许提交 `interval-server/gradle/wrapper/gradle-wrapper.jar`。
+
+### 🔧 技术决策
+- **决策**：项目环境固定使用 JDK 17，而不是 JDK 25。
+- **原因**：项目技术栈是 Spring Boot 3 + Java 17，Gradle toolchain 明确要求 Java 17；JDK 25 虽然更新，但当前 Lombok 版本在 JDK 25 下编译失败。
+- **影响**：后续后端开发和测试应优先使用 `JAVA_HOME=F:\app\jdk-17.0.19+10`。新终端可能需要重启 Cursor/PowerShell 后才能读取用户级 PATH 更新。
+
+- **决策**：保留并提交 Gradle Wrapper 文件。
+- **原因**：项目之前缺少 `gradlew.bat`，导致不同机器必须预装 Gradle；Wrapper 能统一后续命令入口。
+- **影响**：后续应优先使用 `interval-server\gradlew.bat test`。首次运行 Wrapper 需要能访问 Gradle distribution URL 或已缓存分发包。
+
+### ⚠️ 遇到的问题
+- `gradlew.bat test` 首次运行需要下载 `https://services.gradle.org/distributions/gradle-9.5.1-bin.zip`，当前网络连接超时。
+- 当前可通过已安装的 `F:\app\gradle-9.5.1\bin\gradle` 继续运行构建，不依赖 Wrapper 下载。
+- `gradle test` 现在失败在 `compileTestJava`，原因是旧的 Category 测试代码引用了当前 `CategoryRepository`/`CategoryServiceImpl` 中不存在的方法，属于测试代码与实现不一致，不再是环境问题。
+
+### 📝 下次待办
+- [ ] 重启 Cursor/PowerShell，确认新终端默认 `java -version` 为 17，`gradle -version` 可用。
+- [ ] 修复 Category 测试与当前实现不一致的问题，至少让 `compileTestJava` 通过。
+- [ ] 如需使用 Wrapper，解决 `services.gradle.org` 下载超时或预先缓存 Gradle 9.5.1 分发包。
+- [ ] 用户确认 TimeSlot SDD 后，按 TDD 流程继续 TimeSlot 测试与实现。
+
+### 📂 涉及文件
+- `.gitignore`
+- `PROJECT_LOG.md`
+- `interval-server/build.gradle`
+- `interval-server/gradlew`
+- `interval-server/gradlew.bat`
+- `interval-server/gradle/wrapper/gradle-wrapper.properties`
+- `interval-server/gradle/wrapper/gradle-wrapper.jar`
+
+---
+
+## [2026-05-16] TimeSlot 模块 SDD 草案与测试环境复现
+
+### 📋 本次目标
+- 继续推进项目下一步工作，优先确认后端测试环境是否可用，并按 SDD 流程启动 TimeSlot 模块设计。
+
+### ✅ 已完成操作
+- ✅ 阅读 `PROJECT_LOG.md` 和 `QUICK_START.md`，确认当前进度与历史待办。
+- ✅ 阅读 `docs/design/system-design.md`，确认 TimeSlot 固定 96 个 15 分钟格子的核心模型。
+- ✅ 检查 `interval-server` 目录结构、`build.gradle`、现有 `TimeSlot` Entity/Repository、Category 相关实现与测试。
+- ✅ 尝试运行 `interval-server` 后端测试，复现当前 Gradle 执行阻塞。
+- ✅ 新增 `docs/design/sdd-timeslot-module.md`，完成 TimeSlot 模块 SDD 草案，包含架构、数据模型、API 契约、业务逻辑、错误处理与测试策略。
+
+### 🔧 技术决策
+- **决策**：暂不进入 TimeSlot 业务实现，先产出 SDD 草案并等待确认。
+- **原因**：项目规则要求新功能必须先更新 `docs/design/` 并经用户确认，然后才能写测试与实现；同时当前 Gradle 执行环境不可用，无法可靠运行 JUnit。
+- **影响**：下一步应先由用户审阅并确认 TimeSlot SDD；确认后优先恢复 Gradle Wrapper/测试执行能力，再按 TDD 顺序写 JUnit 测试和实现代码。
+
+### ⚠️ 遇到的问题
+- `interval-server` 目录没有 `gradlew.bat` 或 `gradlew`。
+- 仓库中未发现 `gradle/wrapper/*` 文件。
+- 当前环境 PATH 中没有 `gradle` 命令，执行 `gradle test` 失败。
+- 因上述原因，暂时无法运行后端 JUnit 测试。
+
+### 📝 下次待办
+- [ ] 请用户审阅并确认 `docs/design/sdd-timeslot-module.md`。
+- [ ] 恢复后端 Gradle 执行能力：安装 Gradle 后生成 Wrapper，或补齐项目标准 Gradle Wrapper 文件。
+- [ ] SDD 获得确认后，先编写 TimeSlot 的 JUnit 5 测试。
+- [ ] 测试就绪后实现 TimeSlot Repository、DTO、Service、Controller。
+- [ ] 运行后端测试并修复失败。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `QUICK_START.md`
+- `docs/design/system-design.md`
+- `docs/design/sdd-timeslot-module.md`
+- `interval-server/build.gradle`
+- `interval-server/src/main/java/com/interval/timeslot/entity/TimeSlot.java`
+- `interval-server/src/main/java/com/interval/timeslot/repository/TimeSlotRepository.java`
+- `interval-server/src/main/java/com/interval/category/service/CategoryServiceImpl.java`
+
+---
+
+## [2026-05-16] 梳理项目下一步开发方向
+
+### 📋 本次目标
+- 根据项目日志、快速开始文档、系统设计文档和当前仓库状态，判断项目接下来最应该推进的工作。
+
+### ✅ 已完成操作
+- ✅ 阅读 `PROJECT_LOG.md`，确认最近一次提交目标和历史待办。
+- ✅ 阅读 `QUICK_START.md`，确认当前阶段为认证模块、分类模块已完成，时间块模块与前端待开始。
+- ✅ 阅读 `docs/design/system-design.md`，确认核心产品模型以 96 个 15 分钟 TimeSlot 为主线。
+- ✅ 检查当前 Git 分支和最近提交，确认当前位于 `docs/monorepo-onboarding` 分支且工作区无明显未提交改动。
+
+### 🔧 技术决策
+- **决策**：建议优先补齐后端验证基础，再按 SDD 流程启动 TimeSlot 模块。
+- **原因**：TimeSlot 是产品核心能力，但日志中明确存在 JUnit 测试运行问题；如果不先修复测试环境，后续无法可靠执行“先测试、后实现”的开发流程。
+- **影响**：下一阶段应先解决测试/构建阻塞，再创建或更新 TimeSlot 设计文档并进入 TDD 开发。
+
+### ⚠️ 遇到的问题
+- `QUICK_START.md` 提到的 `WORK_SUMMARY.md` 当前未在仓库根目录中发现。
+- 当前只存在 `docs/design/system-design.md`，尚未看到独立的 TimeSlot SDD 文档。
+
+### 📝 下次待办
+- [ ] 运行 `interval-server` 后端测试，复现并修复 JUnit 测试运行问题。
+- [ ] 为 TimeSlot 模块创建或补充 `docs/design/` 下的 SDD，明确 API、DTO、业务规则和测试策略。
+- [ ] 在 SDD 获得确认后，先写 TimeSlot 的 JUnit 5 测试，再实现 Service、Controller、DTO 等代码。
+- [ ] TimeSlot 后端完成后，再考虑 JWT 集成到 Category/TimeSlot API。
+- [ ] 后端核心闭环稳定后，初始化并实现 Vue 前端基础架构与登录/时间格页面。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `QUICK_START.md`
+- `docs/design/system-design.md`
+- `README.md`
+
+---
+
 ## [2026-05-15] 提交当前工作区到 GitHub
 
 ### 📋 本次目标

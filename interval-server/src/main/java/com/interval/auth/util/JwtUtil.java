@@ -1,5 +1,6 @@
 package com.interval.auth.util;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -59,14 +60,24 @@ public class JwtUtil {
      * @return 用户名
      */
     public String getUsernameFromToken(String token) {
-        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+        return parseClaims(token).getSubject();
+    }
+    
+    /**
+     * 从 token 中提取用户 ID
+     * 
+     * @param token JWT token
+     * @return 用户 ID
+     */
+    public Long getUserIdFromToken(String token) {
+        Object userId = parseClaims(token).get("userId");
+        if (userId instanceof Number number) {
+            return number.longValue();
+        }
+        if (userId instanceof String value) {
+            return Long.parseLong(value);
+        }
+        throw new IllegalArgumentException("Token does not contain a valid userId");
     }
     
     /**
@@ -77,14 +88,19 @@ public class JwtUtil {
      */
     public boolean validateToken(String token) {
         try {
-            SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-            Jwts.parser()
-                    .verifyWith(key)
-                    .build()
-                    .parseSignedClaims(token);
+            parseClaims(token);
             return true;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private Claims parseClaims(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

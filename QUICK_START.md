@@ -1,280 +1,156 @@
 # 快速开始指南
 
-> 新窗口必读！快速了解项目状态和如何开始工作
+> 新窗口必读。请先阅读 `PROJECT_LOG.md` 了解最新历史和决策。
 
 ---
 
-## 📖 必读文件（按顺序阅读）
+## 必读文件
 
-### 1. **PROJECT_LOG.md** ⭐ 最重要！
-- 记录所有操作历史、技术决策、待办事项
-- 时间倒序排列，最新的在最上面
-- **每次会话必须先读这个文件**
-
-### 2. **WORK_SUMMARY.md**
-- 当前工作状态的详细总结
-- 已完成的功能清单
-- 测试用例概览
-
-### 3. **docs/design/system-design.md**
-- 完整的系统设计文档
-- 数据模型、API 契约、业务规则
-
-### 4. **README.md**
-- 项目基本信息
-- 技术栈说明
+1. `PROJECT_LOG.md` — 操作历史、技术决策、待办事项，按时间倒序排列。
+2. `docs/design/system-design.md` — 主系统设计文档。
+3. `docs/design/sdd-frontend-auth-time-grid.md` — 前端认证与 Time Grid 基础设计。
+4. `docs/design/sdd-frontend-category-range-extension.md` — 分类管理与范围填充扩展设计。
+5. `README.md` — 当前运行、测试和项目概览。
 
 ---
 
-## 🎯 当前项目状态
+## 当前项目状态
 
-### 阶段
-✅ **认证模块**：已完成设计、测试、实现和验证  
-✅ **分类管理模块**：已完成设计、测试、实现和验证  
-⏳ **时间块模块**：待开始  
-⏳ **前端实现**：待开始
+### 已完成
 
-### 最后更新
-2026-05-08 - 认证模块和分类管理模块实现完成并验证通过
+- 后端认证模块：注册、登录、BCrypt、JWT。
+- 后端 JWT 用户上下文：Category 和 TimeSlot API 通过 `Authorization: Bearer <token>` 获取当前用户。
+- 后端分类模块：查询、新建、更新、智能删除（无历史记录物理删除，有历史记录归档）。
+- 后端 TimeSlot 模块：每日查询、单格 upsert、删除。
+- 前端基础架构：Vue 3 + TypeScript + Vite + Router + Pinia + Axios。
+- 前端认证闭环：登录、注册、JWT 保存、路由守卫、401 清理登录态。
+- 前端 Time Grid：96 个 15 分钟格、单格创建/编辑/删除。
+- 前端分类管理：查询、新建、编辑、删除/归档结果提示。
+- 前端范围填充：先点击起点，再 Shift-click 终点，批量填充连续格子。
+- 前后端 API 冒烟验证通过。
+- 前端测试和生产构建通过。
+- 后端测试通过。
 
-### 下一步
-1. 修复 JUnit 测试运行问题
-2. 实现时间块管理模块（TimeSlot Entity, Service, Controller）
-3. 集成 JWT 认证到所有 API
-4. 开始前端 Vue 项目开发
+### 当前端口
 
----
-
-## 🚀 常用命令
-
-### 后端（interval-server）
-
-```bash
-# 进入后端目录
-cd interval-server
-
-# 运行所有测试
-./gradlew test
-
-# 运行特定测试类
-./gradlew test --tests AuthServiceTest
-
-# 启动后端服务
-./gradlew bootRun
-
-# 清理构建
-./gradlew clean
-
-# 构建项目
-./gradlew build
-```
-
-**Windows 用户**：使用 `gradlew.bat` 替代 `./gradlew`
-
-### 前端（interval-client）
-
-```bash
-# 进入前端目录
-cd interval-client
-
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
-
-# 构建生产版本
-npm run build
-
-# 运行测试
-npm run test
-```
+- 后端：`http://localhost:8088`
+- 前端：`http://localhost:5173`
+- H2 Console：`http://localhost:8088/h2-console`
 
 ---
 
-## 📁 关键目录结构
-
-```
-D:\Project2\Interval
-├── docs/
-│   ├── design/              # 系统设计文档
-│   │   ├── system-design.md           # 主设计文档 ⭐
-│   │   ├── implementation-report.md   # 实现报告
-│   │   └── tdd-auth-implementation-summary.md
-│   ├── prototypes/          # UI 原型
-│   │   ├── login.html                 # 登录页面原型 ✅
-│   │   ├── time-grid-v1.html          # Time Grid 原型
-│   │   └── UPDATE_INSTRUCTIONS.md
-│   └── gradle-setup.md      # Gradle 配置指南
-│
-├── interval-server/         # 后端（Spring Boot 3 + Java 17）
-│   ├── src/
-│   │   ├── main/java/com/interval/
-│   │   │   ├── auth/        # 认证模块 ✅
-│   │   │   ├── common/      # 公共类（ApiResponse, GlobalExceptionHandler）
-│   │   │   └── IntervalApplication.java
-│   │   ├── main/resources/
-│   │   │   └── application.properties
-│   │   └── test/java/com/interval/
-│   │       ├── auth/        # 认证模块测试 ✅
-│   │       └── category/    # 分类模块测试 ⏳
-│   ├── build.gradle         # Gradle 配置
-│   ├── TEST_GUIDE.md        # 测试指南
-│   └── VERIFICATION_REPORT.md
-│
-├── interval-client/         # 前端（Vue 3 + TypeScript）⏳
-│   └── .cursor/rules/       # 前端开发规则
-│
-├── PROJECT_LOG.md           # 操作日志 ⭐ 必读！
-├── QUICK_START.md           # 本文件
-├── WORK_SUMMARY.md          # 工作总结
-└── README.md                # 项目说明
-```
-
----
-
-## 🔧 技术栈
+## 常用命令
 
 ### 后端
-- **框架**：Spring Boot 3.x
-- **语言**：Java 17
-- **构建工具**：Gradle
-- **数据库**：H2（开发/测试）
-- **认证**：JWT + BCrypt
-- **测试**：JUnit 5
-- **架构**：RESTful API（前后端分离）
+
+```bash
+cd interval-server
+gradle test
+gradle bootRun
+```
+
+如果 Gradle Wrapper 下载超时，可使用本机系统 Gradle。此前本机可用：
+
+```text
+F:\app\gradle-9.5.1\bin\gradle.bat
+```
 
 ### 前端
-- **框架**：Vue 3（Composition API）
-- **语言**：TypeScript（strict mode）
-- **构建工具**：Vite
-- **状态管理**：Pinia
-- **路由**：Vue Router 4
-- **HTTP 客户端**：Axios
-- **测试**：Vitest + Vue Test Utils
 
----
-
-## 📋 开发工作流
-
-### 标准流程（遵循 .cursorrules）
-1. **设计阶段**：更新 `docs/design/` 中的设计文档
-2. **测试阶段**：编写 JUnit 5 测试用例（TDD）
-3. **实现阶段**：实现功能代码
-4. **验证阶段**：运行测试，手动验证
-5. **记录阶段**：更新 `PROJECT_LOG.md`
-
-### 每次会话开始
-1. ✅ 阅读 `PROJECT_LOG.md` 了解最新进展
-2. ✅ 检查待办事项列表
-3. ✅ 确认当前要做的任务
-
-### 每次会话结束
-1. ✅ 更新 `PROJECT_LOG.md` 记录本次操作
-2. ✅ 更新待办事项状态
-3. ✅ 记录技术决策和遇到的问题
-
----
-
-## 🎓 重要规则
-
-### 来自 .cursorrules
-- **设计优先**：任何功能必须先更新设计文档
-- **测试驱动**：先写测试，再写实现
-- **前后端分离**：后端只提供 RESTful JSON API
-- **数据隔离**：多用户系统，所有数据必须按 userId 隔离
-- **安全第一**：遵循 OWASP 最佳实践
-
-### Entity 类规范
-- 使用 `@Entity` 和 `@Data`（Lombok）
-- ID 使用 `@Id` + `@GeneratedValue(strategy=IDENTITY)`
-- 关系使用 `FetchType.LAZY`
-
-### DTO 规范
-- 使用 `record` 类型
-- 必须有 compact canonical constructor 验证输入
-
-### Service 规范
-- Service 是 interface，实现在 ServiceImpl
-- ServiceImpl 使用 `@Service` 注解
-- 返回 DTO，不返回 Entity
-
-### Controller 规范
-- 使用 `@RestController` 和 `@RequestMapping`
-- 返回 `ResponseEntity<ApiResponse<?>>`
-- 所有逻辑在 try-catch 中，异常交给 GlobalExceptionHandler
-
----
-
-## 🆘 常见问题
-
-### Q: 如何运行测试？
 ```bash
-cd interval-server
-./gradlew test
+cd interval-client
+npm install
+npm run test
+npm run build
+npm run dev
 ```
 
-### Q: 如何启动后端？
+前端环境变量模板：
+
+```bash
+VITE_API_BASE_URL=http://localhost:8088
+```
+
+---
+
+## 本地联调步骤
+
+1. 启动后端：
+
 ```bash
 cd interval-server
-./gradlew bootRun
+gradle bootRun
 ```
-默认端口：8080
 
-### Q: 如何查看 H2 数据库？
-启动后端后访问：http://localhost:8080/h2-console
-- JDBC URL: `jdbc:h2:mem:testdb`
-- Username: `sa`
-- Password: (留空)
+2. 启动前端：
 
-### Q: 测试失败怎么办？
-1. 查看 `interval-server/TEST_GUIDE.md`
-2. 查看 `interval-server/VERIFICATION_REPORT.md`
-3. 检查 `PROJECT_LOG.md` 中的已知问题
+```bash
+cd interval-client
+npm run dev
+```
 
-### Q: 如何添加新功能？
-1. 先更新 `docs/design/system-design.md`
-2. 编写测试用例
-3. 实现功能代码
-4. 运行测试验证
-5. 更新 `PROJECT_LOG.md`
+3. 打开：`http://localhost:5173`
+4. 注册新用户。
+5. 登录。
+6. 新建分类。
+7. 编辑分类名称或颜色。
+8. 点击单个时间格创建记录。
+9. 先点击一个格子，再按住 Shift 点击另一个格子，批量填充连续格。
+10. 删除时间格。
+11. 删除分类并查看 `DELETED` 或 `ARCHIVED` 提示。
 
 ---
 
-## 📞 获取帮助
+## 关键目录
 
-### 文档资源
-- **系统设计**：`docs/design/system-design.md`
-- **测试指南**：`interval-server/TEST_GUIDE.md`
-- **验证报告**：`interval-server/VERIFICATION_REPORT.md`
-- **Gradle 配置**：`docs/gradle-setup.md`
-- **原型更新**：`docs/prototypes/UPDATE_INSTRUCTIONS.md`
-
-### 关键概念
-- **User**：用户实体，包含 username、password（加密）、email
-- **Category**：分类实体，每个用户独立的分类体系
-- **TimeSlot**：时间块实体，记录用户的时间使用
-- **JWT**：无状态认证，24 小时过期
-- **BCrypt**：密码加密，强度因子 12
+```text
+interval/
+├── docs/
+│   ├── design/
+│   │   ├── system-design.md
+│   │   ├── sdd-frontend-auth-time-grid.md
+│   │   ├── sdd-frontend-category-range-extension.md
+│   │   ├── sdd-jwt-user-context.md
+│   │   └── sdd-timeslot-module.md
+│   └── prototypes/
+├── interval-server/
+│   ├── src/main/java/com/interval/
+│   │   ├── auth/
+│   │   ├── category/
+│   │   ├── timeslot/
+│   │   └── common/
+│   └── src/test/java/com/interval/
+├── interval-client/
+│   ├── src/components/
+│   ├── src/views/
+│   ├── src/stores/
+│   ├── src/services/
+│   ├── src/types/
+│   └── src/__tests__/
+├── PROJECT_LOG.md
+├── QUICK_START.md
+└── README.md
+```
 
 ---
 
-## ✅ 检查清单
+## 开发规则摘要
 
-### 开始工作前
-- [ ] 已阅读 `PROJECT_LOG.md`
-- [ ] 已了解当前项目状态
-- [ ] 已确认下一步任务
-- [ ] 已检查相关设计文档
-
-### 完成工作后
-- [ ] 所有测试通过
-- [ ] 代码符合规范
-- [ ] 已更新 `PROJECT_LOG.md`
-- [ ] 已更新待办事项
+- 新功能或非平凡变更必须先更新 `docs/design/`。
+- 后端新功能：先 JUnit 5 测试，再实现。
+- 前端新功能：先 Vitest / Vue Test Utils 测试，再实现。
+- 所有 API 响应使用 `ApiResponse<T>`。
+- 前端不能直接调用 Axios，必须通过 `src/services/`。
+- 后端 Controller 不直接访问 Repository，业务逻辑在 ServiceImpl。
+- 每次会话结束前更新 `PROJECT_LOG.md`。
 
 ---
 
-**最后更新**：2026-05-08  
-**项目状态**：认证模块完成，分类模块待实现  
-**下一步**：实现分类管理模块
+## 当前后续可选增强
+
+- 设计并实现后端批量 TimeSlot API，替代前端循环 upsert。
+- 分类排序 UI。
+- 归档分类恢复功能。
+- 时间统计/日报/周报视图。
+- JWT refresh token 与生产环境密钥管理。
+- 生产 CORS 域名配置。

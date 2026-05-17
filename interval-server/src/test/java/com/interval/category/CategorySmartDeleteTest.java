@@ -3,6 +3,7 @@ package com.interval.category;
 import com.interval.category.dto.CategoryDto;
 import com.interval.category.dto.DeleteCategoryResponseDto;
 import com.interval.category.entity.Category;
+import com.interval.category.entity.CategoryStatus;
 import com.interval.category.repository.CategoryRepository;
 import com.interval.category.service.CategoryService;
 import com.interval.timeslot.entity.TimeSlot;

@@ -1,0 +1,1 @@
+{"scripts":{"dev":"vite","build":"vue-tsc --noEmit && vite build","test":"vitest run","test:watch":"vitest"},"dependencies":{"@vitejs/plugin-vue":"latest","vite":"latest","vue":"latest","vue-router":"latest","pinia":"latest","axios":"latest"},"devDependencies":{"typescript":"latest","vue-tsc":"latest","vitest":"latest","@vue/test-utils":"latest","jsdom":"latest"}}
