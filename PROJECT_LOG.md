@@ -4,6 +4,150 @@
 
 ---
 
+## [2026-05-20] 原型目录清理与统计文档优化完成
+
+### 📋 本次目标
+- 删除已弃用的 `modern-time-grid.html`，重新梳理统计功能相关文档、原型说明和下一步工作计划。
+
+### ✅ 已完成操作
+- ✅ 删除 `docs/prototypes/modern-time-grid.html`，避免与当前主原型 `modern-time-grid-v2.html` 混淆。
+- ✅ 重写 `docs/prototypes/README.md`，按当前真实状态整理主原型、统计原型、早期登录原型和历史弃用文件说明。
+- ✅ 优化 `docs/design/sdd-category-duration-stats.md`，补充统计原型当前状态、确认标准和更细的正式实现顺序。
+- ✅ 更新 `docs/prototypes/stats-category-duration.html` 的页面说明，明确当前为静态交互原型且使用内置模拟数据。
+
+### 🔧 技术决策
+- **决策**：删除 `modern-time-grid.html`，保留 `modern-time-grid-v2.html` 作为当前唯一主时间格原型。
+- **原因**：旧原型已经被新版替代，继续保留会增加误用和维护成本。
+- **影响**：后续时间格体验统一参考 v2；原型 README 记录该文件已删除。
+
+- **决策**：统计原型仍保持独立 HTML，不提前拆分为正式 Vue 组件。
+- **原因**：当前阶段目标是确认体验和信息架构，正式实现需在 SDD 批准后按测试优先流程推进。
+- **影响**：下一步可以直接以统计 SDD 和原型作为开发依据。
+
+### ⚠️ 遇到的问题
+- 文档局部替换受到换行差异影响，已通过更小粒度替换和脚本修正文档末尾实施顺序。
+
+### 📝 下次待办
+- [ ] 等待用户确认统计原型与 `docs/design/sdd-category-duration-stats.md`。
+- [ ] 若确认通过，先实现后端统计 API 的 JUnit 5 测试。
+- [ ] 后端 API 完成后，实现前端统计页面的类型、service、store、路由和组件测试。
+- [ ] 最后实现正式 Vue 统计页面并进行本地端到端冒烟验证。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `docs/design/sdd-category-duration-stats.md`
+- `docs/prototypes/README.md`
+- `docs/prototypes/stats-category-duration.html`
+- `docs/prototypes/modern-time-grid.html`
+
+---
+
+## [2026-05-20] 分类耗时统计页面原型完成
+
+### 📋 本次目标
+- 先制作统计功能原型，便于确认“分类花了多长时间”的统计页面效果，再进入正式测试和实现。
+
+### ✅ 已完成操作
+- ✅ 更新 `docs/design/sdd-category-duration-stats.md`，新增 Prototype First Scope，明确先做静态 HTML 原型。
+- ✅ 新增 `docs/prototypes/stats-category-duration.html`，提供分类耗时统计页面原型。
+- ✅ 更新 `docs/prototypes/README.md`，登记统计原型的功能和测试方法。
+
+### 🔧 技术决策
+- **决策**：统计页面原型采用独立 HTML + Vue CDN + 内置模拟数据，不接入真实 API。
+- **原因**：当前目标是快速确认 UI 信息架构和交互效果，避免提前进入正式 Vue/后端实现。
+- **影响**：可以直接双击打开查看；正式实现仍需在 SDD 批准后按测试优先流程完成。
+
+- **决策**：原型包含范围切换、汇总卡片、分类进度条、环形结构图、分类详情和空状态。
+- **原因**：这些是第一版统计页面的核心判断点，足以验证页面是否符合用户预期。
+- **影响**：后续正式 Vue 页面可以参考该布局拆分为 `StatsView`、store、service 和类型定义。
+
+### ⚠️ 遇到的问题
+- 初版原型内容过长超过单次写入限制，已压缩为轻量单文件版本并保留核心交互。
+
+### 📝 下次待办
+- [ ] 等待用户查看 `docs/prototypes/stats-category-duration.html` 并反馈视觉和交互调整意见。
+- [ ] 原型确认后，再批准或修订 `docs/design/sdd-category-duration-stats.md`。
+- [ ] 批准后按测试优先顺序实现后端统计 API 和前端统计页面。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `docs/design/sdd-category-duration-stats.md`
+- `docs/prototypes/README.md`
+- `docs/prototypes/stats-category-duration.html`
+
+---
+
+## [2026-05-20] 分类耗时统计功能 SDD 草案完成
+
+### 📋 本次目标
+- 设计统计功能，用于按日期范围统计各分类累计花费时间，并遵循先设计文档后实现的 SDD 工作流。
+
+### ✅ 已完成操作
+- ✅ 阅读 `PROJECT_LOG.md` 和 `QUICK_START.md`，确认当前项目状态与后续待办中已有“时间统计/日报/周报视图”。
+- ✅ 阅读现有系统设计、TimeSlot 模块设计和前端分类/范围填充设计，确认统计功能可基于现有 `TimeSlot` 与 `Category` 数据实时聚合。
+- ✅ 新增 `docs/design/sdd-category-duration-stats.md`，覆盖统计功能的后端 API、前端页面、数据流、业务规则、错误处理和测试策略。
+
+### 🔧 技术决策
+- **决策**：统计结果按 `TimeSlot` 数量乘以固定 15 分钟计算，不新增分钟级时间模型。
+- **原因**：Interval 当前核心模型就是 96 个 15 分钟格，统计应与记录粒度完全一致。
+- **影响**：统计逻辑简单可验证，且不会引入与现有 Time Grid 不一致的时间计算规则。
+
+- **决策**：本阶段不新增汇总表，直接基于 `time_slots` 与 `categories` 做只读聚合查询。
+- **原因**：当前数据量和功能阶段适合实时查询，避免过早引入缓存、快照和数据同步复杂度。
+- **影响**：实现成本低；若后续数据量变大或统计维度增多，再评估汇总表或缓存。
+
+- **决策**：统计范围优先支持今日、本周、本月和自定义日期范围。
+- **原因**：覆盖最常用回顾场景，同时保持第一版统计页面范围可控。
+- **影响**：日报/周报/月报可以通过同一 API 和前端范围选择实现。
+
+### ⚠️ 遇到的问题
+- 当前仅完成 SDD 草案，尚未获得用户批准，因此未编写测试或实现代码。
+
+### 📝 下次待办
+- [ ] 等待用户确认 `docs/design/sdd-category-duration-stats.md`。
+- [ ] 批准后先编写后端 JUnit 5 测试，再实现统计 API。
+- [ ] 后端完成后编写前端 Vitest 测试，再实现统计页面、service、store 和路由入口。
+- [ ] 最后运行后端测试、前端测试、前端构建并进行本地 API 冒烟验证。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `docs/design/sdd-category-duration-stats.md`
+
+---
+
+## [2026-05-20] 前端原型 v2 已登记块擦除设计与实现
+
+### 📋 本次目标
+- 在 `modern-time-grid-v2.html` 原型中，为已登记时间块增加右侧面板擦除能力，并同步设计文档。
+
+### ✅ 已完成操作
+- ✅ 更新 `docs/design/sdd-frontend-prototype-v2.md`，记录右侧“擦除已登记数据”功能的触发条件、行为规则和交互场景。
+- ✅ 在 `docs/prototypes/modern-time-grid-v2.html` 右侧选择面板中，当选择集包含已登记块时显示擦除按钮。
+- ✅ 新增 `eraseSelectedSlots` 原型逻辑，删除选中块中的分类与备注数据，并在完成后清空当前选择。
+
+### 🔧 技术决策
+- **决策**：擦除操作仅影响当前选中块中已有登记数据的块，未登记块保持不变。
+- **原因**：用户可能混合选择已登记与未登记块，擦除应只清理实际存在的数据，避免产生不可见副作用。
+- **影响**：正式实现时可映射为对选中 TimeSlot 的批量删除或逐条删除 API 调用。
+
+- **决策**：擦除完成后自动清空选择。
+- **原因**：擦除后继续保留选中态容易让用户误以为仍在编辑旧数据。
+- **影响**：用户如需继续登记，需要重新选择时间块。
+
+### ⚠️ 遇到的问题
+- 当前仅为 HTML 原型本地状态实现，未涉及真实前后端 API。
+
+### 📝 下次待办
+- [ ] 若该交互确认通过，在 Vue 正式组件中补充测试后实现。
+- [ ] 正式实现前评估是否需要后端批量删除 TimeSlot API。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+- `docs/design/sdd-frontend-prototype-v2.md`
+- `docs/prototypes/modern-time-grid-v2.html`
+
+---
+
 ## [2026-05-17] 分类管理与 Time Grid 范围填充完成
 
 ### 📋 本次目标
