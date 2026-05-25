@@ -2,24 +2,778 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Interval — 分类耗时统计原型</title>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0f172a;background:linear-gradient(180deg,#fff,#f8fafc)}[v-cloak]{display:none}.top{position:sticky;top:0;z-index:5;height:64px;background:rgba(255,255,255,.86);backdrop-filter:blur(14px);border-bottom:1px solid #f1f5f9}.top-inner{max-width:1180px;margin:auto;height:64px;padding:0 24px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;font-weight:800;color:#4f46e5}.logo{width:24px;height:24px;position:relative}.logo:before,.logo:after{content:"";position:absolute;left:50%;transform:translateX(-50%);border-left:8px solid transparent;border-right:8px solid transparent}.logo:before{top:1px;border-bottom:11px solid #6366f1}.logo:after{bottom:1px;border-top:11px solid #a5b4fc}.nav{display:flex;gap:4px;background:#f8fafc;border-radius:999px;padding:4px}.nav button{border:0;background:transparent;padding:8px 16px;border-radius:999px;font-size:12px;color:#64748b}.nav .active{background:#fff;color:#4338ca;font-weight:700;box-shadow:0 1px 4px #e2e8f0}.user{font-size:12px;color:#94a3b8}.wrap{max-width:1180px;margin:auto;padding:34px 24px}.hero{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:22px}.eyebrow{display:inline-flex;align-items:center;gap:8px;background:#eef2ff;color:#4338ca;border:1px solid #e0e7ff;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;letter-spacing:.05em}.dot{width:7px;height:7px;background:#6366f1;border-radius:99px}h1{font-size:38px;line-height:1.1;margin:16px 0 10px;letter-spacing:-.04em}p{margin:0}.muted{color:#64748b;font-size:14px}.tabs{display:flex;gap:8px;background:#fff;border:1px solid #f1f5f9;border-radius:18px;padding:8px;box-shadow:0 1px 3px rgba(15,23,42,.04)}.tabs button{border:0;border-radius:12px;background:transparent;color:#64748b;padding:10px 15px;font-weight:700;cursor:pointer}.tabs .active{background:#4f46e5;color:white;box-shadow:0 8px 22px rgba(79,70,229,.22)}.card{background:rgba(255,255,255,.94);border:1px solid #eef2f7;border-radius:24px;box-shadow:0 1px 3px rgba(15,23,42,.04),0 18px 50px rgba(15,23,42,.04)}.summary{padding:20px;margin-bottom:22px;display:flex;justify-content:space-between;gap:18px;align-items:center}.range small,.stat small{display:block;color:#94a3b8;font-size:11px;font-weight:800;letter-spacing:.04em;margin-bottom:8px}.range strong{font-size:18px}.range div{font-size:12px;color:#94a3b8;margin-top:5px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;min-width:680px}.stat{border-radius:18px;padding:16px}.stat strong{font-size:22px}.s1{background:#eef2ff;color:#4338ca}.s2{background:#ecfdf5;color:#047857}.s3{background:#f0f9ff;color:#0369a1}.s4{background:#f8fafc;color:#334155}.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px}.main{padding:20px}.title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.title-row h2,.side h2{font-size:17px;margin:0 0 5px}.ghost{border:1px solid #e2e8f0;background:white;border-radius:10px;color:#64748b;font-weight:700;font-size:12px;padding:8px 12px;cursor:pointer}.list{display:flex;flex-direction:column;gap:12px}.row{width:100%;text-align:left;border:1px solid #f1f5f9;background:white;border-radius:18px;padding:16px;cursor:pointer;transition:.18s}.row:hover{border-color:#cbd5e1;background:#f8fafc}.row.sel{border-color:#c7d2fe;background:#eef2ff}.row-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}.name{display:flex;gap:12px;align-items:center}.sw{width:13px;height:13px;border-radius:99px;flex:none}.name b{font-size:14px}.name span,.meta{display:block;color:#94a3b8;font-size:11px;margin-top:4px}.arch{display:inline-block;margin-left:7px;padding:2px 6px;border:1px solid #fde68a;background:#fffbeb;color:#b45309;border-radius:7px;font-size:10px}.amount{text-align:right}.amount b{font-size:14px}.bar{height:9px;background:#f1f5f9;border-radius:99px;overflow:hidden}.fill{height:100%;border-radius:99px}.empty{text-align:center;padding:74px 20px}.empty-icon{width:64px;height:64px;border-radius:24px;background:#f8fafc;margin:0 auto 18px;display:grid;place-items:center;color:#cbd5e1;font-size:30px}.side{display:flex;flex-direction:column;gap:22px}.panel{padding:20px}.donut{width:190px;height:190px;margin:20px auto;border-radius:50%;background:conic-gradient(var(--segments));position:relative}.donut:after{content:"";position:absolute;inset:24px;background:white;border-radius:50%;box-shadow:inset 0 0 0 1px #f1f5f9}.legend{display:grid;grid-template-columns:1fr 1fr;gap:9px}.legend div{display:flex;align-items:center;gap:8px;font-size:11px;color:#64748b;min-width:0}.legend span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.detail{border:1px solid #f1f5f9;border-radius:18px;padding:16px}.detail-head{display:flex;gap:12px;align-items:center;margin-bottom:16px}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mini{background:#f8fafc;border-radius:14px;padding:12px}.mini small{display:block;color:#94a3b8;font-size:10px;font-weight:800}.mini b{font-size:13px}.next{background:linear-gradient(135deg,#4f46e5,#4338ca);color:white;padding:20px;border-radius:24px;box-shadow:0 16px 30px rgba(79,70,229,.22)}.next small{color:#c7d2fe;font-weight:800}.next h3{margin:10px 0 8px}.next p{font-size:12px;line-height:1.65;color:#e0e7ff}@media(max-width:900px){.hero,.summary{align-items:stretch;flex-direction:column}.stats{min-width:0;grid-template-columns:1fr 1fr}.layout{grid-template-columns:1fr}.nav{display:none}}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:#0f172a;
+  background:
+    radial-gradient(circle at top left, rgba(99,102,241,.16), transparent 24%),
+    radial-gradient(circle at right top, rgba(14,165,233,.10), transparent 20%),
+    linear-gradient(180deg,#f8fbff 0%,#f8fafc 46%,#f1f5f9 100%);
+}
+[v-cloak]{display:none}
+.top{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:rgba(255,255,255,.72);
+  backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.68);
+}
+.top-inner{
+  max-width:1240px;
+  margin:auto;
+  min-height:68px;
+  padding:0 24px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font-weight:800;
+  color:#4f46e5;
+}
+.logo{width:24px;height:24px;position:relative}
+.logo:before,.logo:after{
+  content:"";
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  border-left:8px solid transparent;
+  border-right:8px solid transparent;
+}
+.logo:before{top:1px;border-bottom:11px solid #6366f1}
+.logo:after{bottom:1px;border-top:11px solid #a5b4fc}
+.nav{
+  display:flex;
+  gap:6px;
+  padding:5px;
+  border-radius:999px;
+  background:rgba(248,250,252,.92);
+  border:1px solid rgba(226,232,240,.9);
+}
+.nav button{
+  border:0;
+  background:transparent;
+  padding:9px 16px;
+  border-radius:999px;
+  font-size:12px;
+  color:#64748b;
+  font-weight:600;
+}
+.nav .active{
+  background:white;
+  color:#4338ca;
+  box-shadow:0 8px 20px rgba(15,23,42,.08);
+}
+.user{font-size:12px;color:#64748b}
+.wrap{
+  max-width:1240px;
+  margin:auto;
+  padding:34px 24px 48px;
+}
+.surface{
+  background:rgba(255,255,255,.82);
+  border:1px solid rgba(255,255,255,.76);
+  border-radius:28px;
+  box-shadow:0 20px 60px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.06);
+  backdrop-filter:blur(20px);
+}
+.soft{
+  background:rgba(255,255,255,.76);
+  border:1px solid rgba(226,232,240,.85);
+  border-radius:22px;
+  box-shadow:0 10px 30px rgba(15,23,42,.05);
+}
+.hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);
+  gap:18px;
+  margin-bottom:22px;
+}
+.hero-main{
+  padding:28px;
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at top right, rgba(165,180,252,.24), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.94), rgba(238,242,255,.88));
+}
+.hero-main::after{
+  content:"";
+  position:absolute;
+  right:-70px;
+  bottom:-110px;
+  width:220px;
+  height:220px;
+  border-radius:999px;
+  background:radial-gradient(circle, rgba(99,102,241,.18), transparent 68%);
+}
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border-radius:999px;
+  border:1px solid rgba(129,140,248,.18);
+  padding:8px 12px;
+  background:rgba(255,255,255,.72);
+  color:#4338ca;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+.dot{
+  width:7px;
+  height:7px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#818cf8,#4f46e5);
+  box-shadow:0 0 0 4px rgba(99,102,241,.12);
+}
+h1{
+  font-size:44px;
+  line-height:1.02;
+  margin:18px 0 12px;
+  letter-spacing:-.06em;
+}
+p{margin:0}
+.muted{color:#64748b;font-size:14px;line-height:1.75}
+.hero-aside{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:22px;
+}
+.tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.tabs button{
+  border:1px solid rgba(226,232,240,.9);
+  border-radius:16px;
+  background:rgba(255,255,255,.82);
+  color:#64748b;
+  padding:11px 16px;
+  font-weight:700;
+  cursor:pointer;
+  transition:all .18s ease;
+}
+.tabs button:hover{
+  border-color:rgba(129,140,248,.35);
+  color:#4338ca;
+}
+.tabs .active{
+  background:linear-gradient(135deg,#6366f1,#4f46e5);
+  color:white;
+  border-color:transparent;
+  box-shadow:0 16px 28px rgba(79,70,229,.22);
+}
+.insight{
+  padding:16px 18px;
+  border-radius:20px;
+  background:linear-gradient(135deg, rgba(99,102,241,.10), rgba(56,189,248,.08));
+  border:1px solid rgba(199,210,254,.75);
+}
+.insight strong{
+  display:block;
+  font-size:13px;
+  color:#4338ca;
+  margin-bottom:6px;
+}
+.summary{
+  margin-bottom:22px;
+  padding:20px;
+}
+.summary-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:16px;
+}
+.range small,.stat small{
+  display:block;
+  color:#94a3b8;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.06em;
+  margin-bottom:8px;
+}
+.range strong{font-size:20px}
+.range div{font-size:13px;color:#94a3b8;margin-top:5px}
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+.stat{
+  padding:18px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.76);
+}
+.stat strong{
+  display:block;
+  font-size:26px;
+  letter-spacing:-.04em;
+}
+.stat span{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  color:rgba(15,23,42,.56);
+}
+.s1{background:linear-gradient(180deg,#eef2ff,#e0e7ff);color:#4338ca}
+.s2{background:linear-gradient(180deg,#ecfdf5,#d1fae5);color:#047857}
+.s3{background:linear-gradient(180deg,#f0f9ff,#dbeafe);color:#0369a1}
+.s4{background:linear-gradient(180deg,#f8fafc,#f1f5f9);color:#334155}
+.layout{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 360px;
+  gap:22px;
+}
+.main{padding:22px}
+.title-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:18px;
+}
+.title-row h2,.side h2{
+  font-size:18px;
+  margin:0 0 6px;
+}
+.ghost{
+  border:1px solid #e2e8f0;
+  background:rgba(255,255,255,.86);
+  border-radius:14px;
+  color:#64748b;
+  font-weight:700;
+  font-size:12px;
+  padding:10px 14px;
+  cursor:pointer;
+  transition:all .18s ease;
+}
+.ghost:hover{
+  color:#4338ca;
+  border-color:rgba(129,140,248,.35);
+  background:#eef2ff;
+}
+.list{display:flex;flex-direction:column;gap:12px}
+.row{
+  width:100%;
+  text-align:left;
+  border:1px solid rgba(241,245,249,.96);
+  background:rgba(255,255,255,.84);
+  border-radius:22px;
+  padding:16px;
+  cursor:pointer;
+  transition:all .18s ease;
+}
+.row:hover{
+  transform:translateY(-1px);
+  border-color:#cbd5e1;
+  background:#f8fafc;
+  box-shadow:0 14px 28px rgba(15,23,42,.05);
+}
+.row.sel{
+  border-color:#c7d2fe;
+  background:linear-gradient(180deg,#eef2ff,#f8faff);
+  box-shadow:0 18px 32px rgba(79,70,229,.10);
+}
+.row-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:12px;
+}
+.name{
+  display:flex;
+  gap:12px;
+  align-items:center;
+}
+.sw{
+  width:13px;
+  height:13px;
+  border-radius:999px;
+  flex:none;
+}
+.name b{font-size:14px}
+.name span,.meta{
+  display:block;
+  color:#94a3b8;
+  font-size:11px;
+  margin-top:4px;
+}
+.arch{
+  display:inline-block;
+  margin-left:7px;
+  padding:3px 7px;
+  border:1px solid #fde68a;
+  background:#fffbeb;
+  color:#b45309;
+  border-radius:999px;
+  font-size:10px;
+}
+.amount{text-align:right}
+.amount b{font-size:14px}
+.bar{
+  height:10px;
+  background:#f1f5f9;
+  border-radius:999px;
+  overflow:hidden;
+}
+.fill{height:100%;border-radius:999px}
+.empty{
+  text-align:center;
+  padding:78px 20px;
+  border-radius:24px;
+  border:1px dashed #cbd5e1;
+  background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(248,250,252,.94));
+}
+.empty-icon{
+  width:68px;
+  height:68px;
+  border-radius:24px;
+  background:#f8fafc;
+  margin:0 auto 18px;
+  display:grid;
+  place-items:center;
+  color:#cbd5e1;
+  font-size:30px;
+}
+.side{display:flex;flex-direction:column;gap:18px}
+.panel{padding:20px}
+.donut-wrap{
+  display:grid;
+  place-items:center;
+  margin:18px auto 16px;
+  position:relative;
+  width:210px;
+  height:210px;
+}
+.donut{
+  width:210px;
+  height:210px;
+  border-radius:50%;
+  background:conic-gradient(var(--segments));
+  position:relative;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);
+}
+.donut::after{
+  content:"";
+  position:absolute;
+  inset:26px;
+  background:white;
+  border-radius:50%;
+  box-shadow:inset 0 0 0 1px #f1f5f9;
+}
+.donut-center{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  z-index:1;
+}
+.donut-center strong{
+  font-size:22px;
+  letter-spacing:-.05em;
+}
+.donut-center span{
+  margin-top:6px;
+  font-size:11px;
+  color:#94a3b8;
+}
+.legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:999px;
+  background:#f8fafc;
+  font-size:11px;
+  color:#64748b;
+}
+.detail{
+  border:1px solid #f1f5f9;
+  border-radius:22px;
+  padding:16px;
+}
+.detail-head{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-bottom:16px;
+}
+.detail-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.mini{
+  background:#f8fafc;
+  border-radius:16px;
+  padding:12px;
+}
+.mini small{
+  display:block;
+  color:#94a3b8;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.04em;
+}
+.mini b{
+  display:block;
+  margin-top:6px;
+  font-size:13px;
+}
+.trend{
+  display:flex;
+  gap:10px;
+  align-items:flex-end;
+  height:170px;
+  padding-top:10px;
+}
+.trend-col{
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+}
+.trend-bar{
+  width:100%;
+  max-width:30px;
+  border-radius:999px 999px 12px 12px;
+  background:linear-gradient(180deg,#818cf8 0%,#4f46e5 100%);
+  box-shadow:0 10px 22px rgba(79,70,229,.18);
+}
+.trend-label{
+  font-size:11px;
+  color:#94a3b8;
+}
+.trend-value{
+  font-size:10px;
+  color:#64748b;
+}
+.next{
+  padding:20px;
+  border-radius:24px;
+  background:linear-gradient(135deg,#4f46e5,#4338ca);
+  color:white;
+  box-shadow:0 20px 34px rgba(79,70,229,.22);
+}
+.next small{
+  color:#c7d2fe;
+  font-weight:800;
+  letter-spacing:.05em;
+}
+.next h3{margin:10px 0 8px}
+.next p{font-size:12px;line-height:1.75;color:#e0e7ff}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#dbe4f0;border-radius:999px}
+@media(max-width:1024px){
+  .hero,.layout{grid-template-columns:1fr}
+}
+@media(max-width:900px){
+  .summary-top{align-items:stretch;flex-direction:column}
+  .stats{grid-template-columns:1fr 1fr}
+  .nav{display:none}
+}
+@media(max-width:640px){
+  .wrap{padding:22px 16px 36px}
+  h1{font-size:34px}
+  .hero-main,.hero-aside,.main,.panel,.summary{padding:18px}
+  .stats{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 <div id="app" v-cloak>
-<header class="top"><div class="top-inner"><div style="display:flex;align-items:center;gap:30px"><div class="brand"><div class="logo"></div>Interval</div><nav class="nav"><button>时间格</button><button class="active">统计</button><button>分类</button></nav></div><div class="user">demo_user&nbsp;&nbsp; 退出</div></div></header>
-<main class="wrap">
-<section class="hero"><div><div class="eyebrow"><span class="dot"></span>CATEGORY DURATION STATS</div><h1>分类耗时统计</h1><p class="muted">按 15 分钟时间格聚合，快速查看每个分类在选定范围内投入了多少时间。当前为静态交互原型，数据为内置模拟数据。</p></div><div class="tabs"><button v-for="o in opts" :class="range===o.k?'active':''" @click="pick(o.k)">{{o.t}}</button></div></section>
-<section class="card summary"><div class="range"><small>当前统计范围</small><strong>{{sum.label}}</strong><div>{{sum.start}} 至 {{sum.end}} · 共 {{sum.days}} 天</div></div><div class="stats"><div class="stat s1"><small>已记录</small><strong>{{dur(sum.rec)}}</strong></div><div class="stat s2"><small>时间块</small><strong>{{sum.slots}} 格</strong></div><div class="stat s3"><small>记录率</small><strong>{{sum.rate}}%</strong></div><div class="stat s4"><small>未记录</small><strong>{{dur(sum.unrec)}}</strong></div></div></section>
-<section class="layout"><div class="card main"><div class="title-row"><div><h2>分类占比</h2><p class="muted">点击分类可以查看右侧详情。</p></div><button class="ghost" @click="empty=!empty">{{empty?'显示示例数据':'查看空状态'}}</button></div><div v-if="empty" class="empty"><div class="empty-icon">⌁</div><h3>这个时间范围还没有记录</h3><p class="muted">回到时间格页面登记后，这里会自动生成分类耗时统计。</p></div><div v-else class="list"><button v-for="c in sum.cats" :key="c.id" class="row" :class="sel===c.id?'sel':''" @click="sel=c.id"><div class="row-top"><div class="name"><span class="sw" :style="{background:c.color}"></span><div><b>{{c.name}}</b><i v-if="c.status==='ARCHIVED'" class="arch">已归档</i><span>{{c.slots}} 个时间块 · {{c.status}}</span></div></div><div class="amount"><b>{{dur(c.min)}}</b><span class="meta">{{c.pct.toFixed(2)}}%</span></div></div><div class="bar"><div class="fill" :style="{width:c.pct+'%',background:c.color}"></div></div></button></div></div><aside class="side"><div class="card panel"><h2>结构概览</h2><p class="muted">已记录时间的分类组成。</p><div class="donut" :style="donut"></div><div class="legend"><div v-for="c in sum.cats.slice(0,4)"><span class="sw" :style="{background:c.color,width:'8px',height:'8px'}"></span><span>{{c.name}}</span></div></div></div><div class="card panel"><h2>分类详情</h2><p class="muted" style="margin-bottom:16px">当前选中的分类统计摘要。</p><div class="detail"><div class="detail-head"><span class="sw" :style="{background:cur.color,width:'16px',height:'16px'}"></span><div><b>{{cur.name}}</b><div class="meta">{{cur.status==='ARCHIVED'?'历史分类，仍参与统计':'当前可用分类'}}</div></div></div><div class="detail-grid"><div class="mini"><small>耗时</small><b>{{dur(cur.min)}}</b></div><div class="mini"><small>占比</small><b>{{cur.pct.toFixed(2)}}%</b></div><div class="mini"><small>时间块</small><b>{{cur.slots}} 格</b></div><div class="mini"><small>平均每天</small><b>{{dur(Math.round(cur.min/sum.days))}}</b></div></div></div></div><div class="next"><small>下一步可扩展</small><h3>日报 / 周报 / 月报</h3><p>当前原型先验证分类耗时统计。确认后可以在同一 API 基础上扩展趋势图、活动名称排行和导出。</p></div></aside></section>
-</main>
+  <header class="top">
+    <div class="top-inner">
+      <div style="display:flex;align-items:center;gap:30px">
+        <div class="brand"><div class="logo"></div>Interval</div>
+        <nav class="nav">
+          <button>时间格</button>
+          <button class="active">统计</button>
+          <button>分类</button>
+        </nav>
+      </div>
+      <div class="user">demo_user&nbsp;&nbsp; 退出</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="surface hero-main">
+        <div class="eyebrow"><span class="dot"></span>CATEGORY DURATION STATS</div>
+        <h1>分类耗时统计</h1>
+        <p class="muted">按 15 分钟时间格聚合，把“时间花在哪”这件事做成更清晰的产品视图。这个版本重点优化了层级、卡片质感、图表区域和数据摘要结构。</p>
+      </div>
+      <div class="surface hero-aside">
+        <div class="tabs">
+          <button v-for="o in opts" :class="range===o.k?'active':''" @click="pick(o.k)">{{o.t}}</button>
+        </div>
+        <div class="insight">
+          <strong>本次范围洞察</strong>
+          <p class="muted" style="font-size:13px;line-height:1.7">{{insight}}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="surface summary">
+      <div class="summary-top">
+        <div class="range">
+          <small>当前统计范围</small>
+          <strong>{{sum.label}}</strong>
+          <div>{{sum.start}} 至 {{sum.end}} · 共 {{sum.days}} 天</div>
+        </div>
+        <div class="muted" style="max-width:420px">默认聚焦“记录占比 + 分类结构 + 选中分类详情”，方便快速验证统计页是否足够可读。</div>
+      </div>
+      <div class="stats">
+        <div class="stat s1">
+          <small>已记录</small>
+          <strong>{{dur(sum.rec)}}</strong>
+          <span>真实投入的可追踪时长</span>
+        </div>
+        <div class="stat s2">
+          <small>时间块</small>
+          <strong>{{sum.slots}} 格</strong>
+          <span>所有已登记的 15 分钟块</span>
+        </div>
+        <div class="stat s3">
+          <small>记录率</small>
+          <strong>{{sum.rate}}%</strong>
+          <span>范围内总时长的覆盖情况</span>
+        </div>
+        <div class="stat s4">
+          <small>未记录</small>
+          <strong>{{dur(sum.unrec)}}</strong>
+          <span>仍可继续补记的时间</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="surface main">
+        <div class="title-row">
+          <div>
+            <h2>分类占比</h2>
+            <p class="muted">点击任一分类，右侧会同步展示细节信息与趋势解读。</p>
+          </div>
+          <button class="ghost" @click="empty=!empty">{{empty ? '显示示例数据' : '查看空状态'}}</button>
+        </div>
+
+        <div v-if="empty" class="empty">
+          <div class="empty-icon">⌁</div>
+          <h3>这个时间范围还没有记录</h3>
+          <p class="muted">回到时间格页面登记后，这里会自动生成分类耗时统计。空状态也保留了正式产品的留白和引导。</p>
+        </div>
+
+        <div v-else class="list">
+          <button v-for="c in sum.cats" :key="c.id" class="row" :class="sel===c.id?'sel':''" @click="sel=c.id">
+            <div class="row-top">
+              <div class="name">
+                <span class="sw" :style="{background:c.color}"></span>
+                <div>
+                  <b>{{c.name}}</b>
+                  <i v-if="c.status==='ARCHIVED'" class="arch">已归档</i>
+                  <span>{{c.slots}} 个时间块 · {{c.status==='ARCHIVED'?'历史分类':'当前分类'}}</span>
+                </div>
+              </div>
+              <div class="amount">
+                <b>{{dur(c.min)}}</b>
+                <span class="meta">{{c.pct.toFixed(2)}}%</span>
+              </div>
+            </div>
+            <div class="bar">
+              <div class="fill" :style="{width:c.pct+'%',background:c.color}"></div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <aside class="side">
+        <div class="surface panel">
+          <h2>结构概览</h2>
+          <p class="muted">已记录时间在不同分类之间的分布情况。</p>
+          <div class="donut-wrap">
+            <div class="donut" :style="donut"></div>
+            <div class="donut-center">
+              <strong>{{dur(sum.rec)}}</strong>
+              <span>总记录时长</span>
+            </div>
+          </div>
+          <div class="legend">
+            <div v-for="c in sum.cats.slice(0,6)" :key="c.id" class="legend-item">
+              <span class="sw" :style="{background:c.color,width:'8px',height:'8px'}"></span>
+              <span>{{c.name}}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="surface panel">
+          <h2>分类详情</h2>
+          <p class="muted" style="margin-bottom:16px">当前选中分类的统计摘要。</p>
+          <div class="detail">
+            <div class="detail-head">
+              <span class="sw" :style="{background:cur.color,width:'16px',height:'16px'}"></span>
+              <div>
+                <b>{{cur.name}}</b>
+                <div class="meta">{{cur.status==='ARCHIVED'?'历史分类，仍参与统计':'当前可用分类'}}</div>
+              </div>
+            </div>
+            <div class="detail-grid">
+              <div class="mini"><small>耗时</small><b>{{dur(cur.min)}}</b></div>
+              <div class="mini"><small>占比</small><b>{{cur.pct.toFixed(2)}}%</b></div>
+              <div class="mini"><small>时间块</small><b>{{cur.slots}} 格</b></div>
+              <div class="mini"><small>平均每天</small><b>{{dur(Math.round(cur.min/sum.days))}}</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="surface panel">
+          <h2>时段趋势</h2>
+          <p class="muted">这里用简单柱条模拟同一范围内的每日记录节奏。</p>
+          <div class="trend">
+            <div v-for="item in trend" :key="item.label" class="trend-col">
+              <div class="trend-value">{{Math.round(item.minutes/60)}}h</div>
+              <div class="trend-bar" :style="{height:trendMax ? ((item.minutes / trendMax) * 110 + 18) + 'px' : '18px'}"></div>
+              <div class="trend-label">{{item.label}}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="next">
+          <small>下一步可扩展</small>
+          <h3>日报 / 周报 / 月报</h3>
+          <p>当前原型先验证分类耗时统计。确认后可以在同一 API 基础上扩展趋势图、活动名称排行、导出和对比视图。</p>
+        </div>
+      </aside>
+    </section>
+  </main>
 </div>
+
 <script>
-const {createApp,ref,computed}=Vue;const data={today:['今日统计','2026-05-20','2026-05-20',1,1440,[[1,'工作','#6366f1','ACTIVE',18],[2,'学习','#22c55e','ACTIVE',10],[3,'运动','#f97316','ACTIVE',4],[4,'生活','#14b8a6','ACTIVE',6]]],week:['本周统计','2026-05-18','2026-05-24',7,10080,[[1,'工作','#6366f1','ACTIVE',96],[2,'学习','#22c55e','ACTIVE',42],[5,'项目复盘','#8b5cf6','ARCHIVED',18],[3,'运动','#f97316','ACTIVE',16],[4,'生活','#14b8a6','ACTIVE',25]]],month:['本月统计','2026-05-01','2026-05-31',31,44640,[[1,'工作','#6366f1','ACTIVE',320],[2,'学习','#22c55e','ACTIVE',164],[4,'生活','#14b8a6','ACTIVE',110],[3,'运动','#f97316','ACTIVE',56],[5,'项目复盘','#8b5cf6','ARCHIVED',28],[6,'休息','#64748b','ACTIVE',72]]],custom:['自定义范围','2026-05-10','2026-05-20',11,15840,[[1,'工作','#6366f1','ACTIVE',132],[2,'学习','#22c55e','ACTIVE',58],[4,'生活','#14b8a6','ACTIVE',39],[3,'运动','#f97316','ACTIVE',22],[5,'项目复盘','#8b5cf6','ARCHIVED',12]]]};createApp({setup(){const range=ref('week'),sel=ref(1),empty=ref(false),opts=[{k:'today',t:'今日'},{k:'week',t:'本周'},{k:'month',t:'本月'},{k:'custom',t:'自定义'}];const sum=computed(()=>{const d=data[range.value],cats=d[5].map(x=>({id:x[0],name:x[1],color:x[2],status:x[3],slots:x[4],min:x[4]*15}));const rec=cats.reduce((s,c)=>s+c.min,0);cats.forEach(c=>c.pct=rec?c.min/rec*100:0);cats.sort((a,b)=>b.min-a.min);return{label:d[0],start:d[1],end:d[2],days:d[3],total:d[4],cats,slots:rec/15,rec,unrec:Math.max(d[4]-rec,0),rate:(rec/d[4]*100).toFixed(1)}});const cur=computed(()=>sum.value.cats.find(c=>c.id===sel.value)||sum.value.cats[0]);const donut=computed(()=>{let n=0;const p=sum.value.cats.map(c=>{const a=n,b=n+c.pct/100*360;n=b;return`${c.color} ${a}deg ${b}deg`});if(n<360)p.push(`#f1f5f9 ${n}deg 360deg`);return{'--segments':p.join(',')}});function pick(k){range.value=k;empty.value=false;sel.value=data[k][5][0][0]}function dur(m){if(m<60)return`${m} 分钟`;const h=Math.floor(m/60),r=m%60;return r?`${h} 小时 ${r} 分钟`:`${h} 小时`}return{range,sel,empty,opts,sum,cur,donut,pick,dur}}}).mount('#app');
+const { createApp, ref, computed } = Vue;
+
+const data = {
+  today: ['今日统计', '2026-05-20', '2026-05-20', 1, 1440, [[1, '工作', '#6366f1', 'ACTIVE', 18], [2, '学习', '#22c55e', 'ACTIVE', 10], [3, '运动', '#f97316', 'ACTIVE', 4], [4, '生活', '#14b8a6', 'ACTIVE', 6]]],
+  week: ['本周统计', '2026-05-18', '2026-05-24', 7, 10080, [[1, '工作', '#6366f1', 'ACTIVE', 96], [2, '学习', '#22c55e', 'ACTIVE', 42], [5, '项目复盘', '#8b5cf6', 'ARCHIVED', 18], [3, '运动', '#f97316', 'ACTIVE', 16], [4, '生活', '#14b8a6', 'ACTIVE', 25]]],
+  month: ['本月统计', '2026-05-01', '2026-05-31', 31, 44640, [[1, '工作', '#6366f1', 'ACTIVE', 320], [2, '学习', '#22c55e', 'ACTIVE', 164], [4, '生活', '#14b8a6', 'ACTIVE', 110], [3, '运动', '#f97316', 'ACTIVE', 56], [5, '项目复盘', '#8b5cf6', 'ARCHIVED', 28], [6, '休息', '#64748b', 'ACTIVE', 72]]],
+  custom: ['自定义范围', '2026-05-10', '2026-05-20', 11, 15840, [[1, '工作', '#6366f1', 'ACTIVE', 132], [2, '学习', '#22c55e', 'ACTIVE', 58], [4, '生活', '#14b8a6', 'ACTIVE', 39], [3, '运动', '#f97316', 'ACTIVE', 22], [5, '项目复盘', '#8b5cf6', 'ARCHIVED', 12]]]
+};
+
+const trendMap = {
+  today: [{ label: '上午', minutes: 165 }, { label: '中午', minutes: 60 }, { label: '下午', minutes: 120 }, { label: '晚上', minutes: 120 }],
+  week: [{ label: '一', minutes: 360 }, { label: '二', minutes: 420 }, { label: '三', minutes: 390 }, { label: '四', minutes: 310 }, { label: '五', minutes: 405 }, { label: '六', minutes: 280 }, { label: '日', minutes: 210 }],
+  month: [{ label: 'W1', minutes: 1620 }, { label: 'W2', minutes: 1740 }, { label: 'W3', minutes: 1680 }, { label: 'W4', minutes: 1545 }, { label: 'W5', minutes: 1230 }],
+  custom: [{ label: '05/10', minutes: 270 }, { label: '05/12', minutes: 315 }, { label: '05/14', minutes: 300 }, { label: '05/16', minutes: 255 }, { label: '05/18', minutes: 345 }, { label: '05/20', minutes: 285 }]
+};
+
+createApp({
+  setup() {
+    const range = ref('week');
+    const sel = ref(1);
+    const empty = ref(false);
+    const opts = [
+      { k: 'today', t: '今日' },
+      { k: 'week', t: '本周' },
+      { k: 'month', t: '本月' },
+      { k: 'custom', t: '自定义' }
+    ];
+
+    const sum = computed(() => {
+      const current = data[range.value];
+      const cats = current[5].map(item => ({
+        id: item[0],
+        name: item[1],
+        color: item[2],
+        status: item[3],
+        slots: item[4],
+        min: item[4] * 15
+      }));
+      const rec = cats.reduce((total, cat) => total + cat.min, 0);
+      cats.forEach(cat => {
+        cat.pct = rec ? (cat.min / rec) * 100 : 0;
+      });
+      cats.sort((a, b) => b.min - a.min);
+      return {
+        label: current[0],
+        start: current[1],
+        end: current[2],
+        days: current[3],
+        total: current[4],
+        cats,
+        slots: rec / 15,
+        rec,
+        unrec: Math.max(current[4] - rec, 0),
+        rate: ((rec / current[4]) * 100).toFixed(1)
+      };
+    });
+
+    const cur = computed(() => sum.value.cats.find(cat => cat.id === sel.value) || sum.value.cats[0]);
+    const bestCat = computed(() => sum.value.cats[0] || null);
+    const insight = computed(() => {
+      if (!bestCat.value) return '当前范围暂无足够数据。';
+      return `${bestCat.value.name} 是当前投入最多的分类，占比 ${bestCat.value.pct.toFixed(1)}%，总计 ${dur(bestCat.value.min)}。这类洞察适合作为统计页第一眼可见的信息。`;
+    });
+    const trend = computed(() => trendMap[range.value] || []);
+    const trendMax = computed(() => {
+      const minutes = trend.value.map(item => item.minutes);
+      return minutes.length ? Math.max(...minutes) : 0;
+    });
+    const donut = computed(() => {
+      let offset = 0;
+      const segments = sum.value.cats.map(cat => {
+        const start = offset;
+        const end = offset + (cat.pct / 100) * 360;
+        offset = end;
+        return `${cat.color} ${start}deg ${end}deg`;
+      });
+      if (offset < 360) segments.push(`#f1f5f9 ${offset}deg 360deg`);
+      return { '--segments': segments.join(',') };
+    });
+
+    function pick(key) {
+      range.value = key;
+      empty.value = false;
+      sel.value = data[key][5][0][0];
+    }
+
+    function dur(minutes) {
+      if (minutes < 60) return `${minutes} 分钟`;
+      const hour = Math.floor(minutes / 60);
+      const rest = minutes % 60;
+      return rest ? `${hour} 小时 ${rest} 分钟` : `${hour} 小时`;
+    }
+
+    return { range, sel, empty, opts, sum, cur, bestCat, insight, donut, trend, trendMax, pick, dur };
+  }
+}).mount('#app');
 </script>
 </body>
 </html>
