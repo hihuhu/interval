@@ -408,22 +408,46 @@ ORDER BY COUNT(ts.id) DESC, c.displayOrder ASC, c.name ASC
 docs/prototypes/stats-category-duration.html
 ```
 
-当前状态：原型已完成，可作为第一版正式统计页面的视觉和交互参考。
+当前状态：原型已完成并在 2026-05 完成视觉升级，可作为第一版正式统计页面的视觉和交互参考。
 
 原型目标：
 
-- 延续 `modern-time-grid-v2.html` 的轻量白底、卡片、紫色强调视觉风格。
-- 展示统计页面入口、范围选择、汇总卡片、分类占比列表和空状态。
+- 延续 `modern-time-grid-v2.html` 的浅色工作台、玻璃感面板、柔和边框和清晰信息层级。
+- 展示统计页面入口、范围选择、洞察摘要、汇总指标、分类占比列表、结构概览、分类详情、趋势占位和空状态。
 - 使用内置模拟数据展示“今日 / 本周 / 本月 / 自定义”切换效果。
 - 支持按分类点击高亮，用于观察右侧详情摘要。
 - 支持展示已归档分类仍参与历史统计。
 - 不包含真实 API、JWT、Vue Router 或正式组件拆分。
+
+原型版面结构：
+
+```text
+stats-category-duration.html
+├── top navigation
+├── hero / insight area
+│   ├── page title and scope description
+│   └── quick range segmented control + generated insight
+├── summary metrics
+│   ├── total recorded duration
+│   ├── recorded slot count
+│   ├── record rate
+│   └── unrecorded duration
+├── category duration list
+│   └── row: color swatch, name, archived badge, duration, percentage, progress bar
+└── side analysis
+    ├── donut composition overview
+    ├── selected category detail
+    ├── simple trend placeholder
+    └── future expansion panel
+```
 
 原型确认标准：
 
 - 页面能清楚回答“每个分类花了多长时间”。
 - 汇总区不会喧宾夺主，重点仍是分类耗时。
 - 空状态、已归档分类和不同统计范围都有明确表现。
+- 范围切换后，洞察文案、汇总指标、分类列表、圆环图、详情卡和趋势占位保持同步。
+- 正式实现可以先保留趋势占位，也可以在统计 API 提供 daily stats 后接入真实趋势数据。
 - 信息密度适合桌面端第一版；移动端只要求基础可读，不作为本阶段重点。
 
 原型通过后，再进入测试和正式实现阶段。
@@ -438,3 +462,17 @@ docs/prototypes/stats-category-duration.html
 6. 前端实现统计页面与导航入口。
 7. 运行前端测试和生产构建。
 8. 使用真实 API 做本地冒烟验证：登录、新建分类、登记 TimeSlot、访问统计页并核对分类耗时。
+
+## 12. 2026-05 Prototype Update Notes
+
+本轮原型更新范围：
+
+- `docs/prototypes/stats-category-duration.html` 完成新版视觉重构。
+- `docs/prototypes/modern-time-grid-v2.html` 完成同风格视觉升级，统计页正式实现应沿用其导航、面板、指标卡、标签和空状态语言。
+- `docs/prototypes/README.md` 已记录本轮原型优化总结和后续建议。
+
+正式实现注意事项：
+
+- API 第一版仍可只返回 category duration summary；趋势模块不是后端 P0 要求。
+- 如果后续希望趋势模块使用真实数据，可在 API 增加 `dailyStats` 或独立新增日聚合接口。
+- 统计页面的主要任务仍是让用户快速比较分类耗时，趋势和扩展面板必须保持次级视觉权重。
