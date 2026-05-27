@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interval — 时间追踪 v2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        accent: {
+          50: '#eef2ff',
+          100: '#e0e7ff',
+          200: '#c7d2fe',
+          300: '#a5b4fc',
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca'
+        },
+        brand: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a'
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+[v-cloak]{display:none}
+*{font-family:'Inter',system-ui,sans-serif}
+body{
+  min-height:100vh;
+  margin:0;
+  color:#0f172a;
+  background:
+    radial-gradient(circle at top left, rgba(99,102,241,.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(14,165,233,.10), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #f8fafc 48%, #f1f5f9 100%);
+}
+.dashboard-shell{
+  position:relative;
+}
+.dashboard-shell::before,
+.dashboard-shell::after{
+  content:'';
+  position:fixed;
+  z-index:0;
+  border-radius:999px;
+  filter:blur(80px);
+  pointer-events:none;
+}
+.dashboard-shell::before{
+  top:80px;
+  left:-100px;
+  width:240px;
+  height:240px;
+  background:rgba(99,102,241,.14);
+}
+.dashboard-shell::after{
+  top:260px;
+  right:-80px;
+  width:220px;
+  height:220px;
+  background:rgba(56,189,248,.12);
+}
+.surface-card{
+  background:rgba(255,255,255,.82);
+  border:1px solid rgba(255,255,255,.75);
+  box-shadow:0 20px 60px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.06);
+  backdrop-filter:blur(22px);
+  border-radius:24px;
+}
+.surface-card-soft{
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(226,232,240,.9);
+  box-shadow:0 10px 36px rgba(15,23,42,.05);
+  border-radius:22px;
+}
+.hero-panel{
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at top right, rgba(165,180,252,.24), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.92), rgba(238,242,255,.88));
+}
+.hero-panel::after{
+  content:'';
+  position:absolute;
+  inset:auto -80px -120px auto;
+  width:220px;
+  height:220px;
+  border-radius:999px;
+  background:radial-gradient(circle, rgba(99,102,241,.18), transparent 68%);
+}
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(129,140,248,.18);
+  background:rgba(255,255,255,.7);
+  color:#4338ca;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+.eyebrow-dot{
+  width:7px;
+  height:7px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#818cf8,#4f46e5);
+  box-shadow:0 0 0 4px rgba(99,102,241,.12);
+}
+.metric-card{
+  padding:18px;
+  border-radius:20px;
+  border:1px solid rgba(226,232,240,.8);
+  background:rgba(255,255,255,.76);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+}
+.metric-label{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.06em;
+  color:#64748b;
+}
+.metric-value{
+  margin-top:10px;
+  font-size:28px;
+  font-weight:800;
+  color:#0f172a;
+  letter-spacing:-.04em;
+}
+.metric-help{
+  margin-top:6px;
+  font-size:12px;
+  color:#64748b;
+}
+.ghost-button{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  border-radius:14px;
+  border:1px solid rgba(203,213,225,.8);
+  background:rgba(255,255,255,.68);
+  color:#475569;
+  font-size:12px;
+  font-weight:600;
+  transition:all .18s ease;
+}
+.ghost-button:hover{
+  background:rgba(238,242,255,.82);
+  border-color:rgba(129,140,248,.35);
+  color:#4338ca;
+}
+.btn-primary{
+  background:linear-gradient(135deg,#6366f1,#4f46e5);
+  color:#fff;
+  box-shadow:0 16px 30px rgba(79,70,229,.25);
+  transition:all .2s ease;
+}
+.btn-primary:hover{
+  transform:translateY(-1px);
+  box-shadow:0 18px 34px rgba(79,70,229,.3);
+}
+.btn-primary:active{transform:translateY(0)}
+.input-underline{
+  border:none;
+  border-bottom:1.5px solid #e2e8f0;
+  border-radius:0;
+  outline:none;
+  transition:border-color .3s,box-shadow .3s;
+  background:transparent;
+}
+.input-underline:focus{
+  border-bottom-color:#6366f1;
+  box-shadow:0 1px 0 0 #6366f1;
+}
+.input-underline::placeholder{color:#94a3b8;font-weight:300}
+.fade-enter-active,.fade-leave-active{transition:opacity .25s,transform .25s}
+.fade-enter-from,.fade-leave-to{opacity:0;transform:translateY(-4px)}
+.slide-enter-active,.slide-leave-active{transition:all .3s cubic-bezier(.4,0,.2,1)}
+.slide-enter-from,.slide-leave-to{opacity:0;transform:translateX(12px)}
+.logo-icon{width:28px;height:28px;position:relative}
+.logo-icon::before,.logo-icon::after{
+  content:'';
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  width:0;
+  height:0;
+  border-left:9px solid transparent;
+  border-right:9px solid transparent;
+}
+.logo-icon::before{top:2px;border-bottom:13px solid #6366f1}
+.logo-icon::after{bottom:2px;border-top:13px solid #a5b4fc}
+.grid-board{
+  background:
+    linear-gradient(180deg, rgba(248,250,252,.88), rgba(255,255,255,.96)),
+    linear-gradient(90deg, rgba(99,102,241,.03), transparent 40%);
+}
+.grid-cell{
+  position:relative;
+  overflow:hidden;
+  user-select:none;
+  cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+}
+.grid-cell:hover{
+  transform:translateY(-1px);
+  box-shadow:0 0 0 2px rgba(99,102,241,.32) inset, 0 10px 16px rgba(99,102,241,.08);
+}
+.grid-cell.selected{
+  box-shadow:0 0 0 3px #6366f1 inset, 0 12px 20px rgba(79,70,229,.16)!important;
+}
+.grid-cell.selected::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg, rgba(99,102,241,.32), rgba(99,102,241,.5));
+  pointer-events:none;
+  z-index:0;
+}
+.grid-cell>*{position:relative;z-index:1}
+.grid-cell.dragging{
+  box-shadow:0 0 0 2px rgba(99,102,241,.5) inset;
+  background:rgba(99,102,241,.12)!important;
+}
+.selection-card{
+  border:1px solid rgba(199,210,254,.7);
+  background:linear-gradient(180deg, rgba(255,255,255,.88), rgba(238,242,255,.8));
+}
+.selection-empty{
+  border:1px dashed rgba(203,213,225,.95);
+  background:linear-gradient(180deg, rgba(255,255,255,.7), rgba(248,250,252,.95));
+}
+.selection-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 12px;
+  border-radius:999px;
+  background:rgba(99,102,241,.08);
+  color:#4338ca;
+  font-size:11px;
+  font-weight:700;
+}
+.mini-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.78);
+  border:1px solid rgba(226,232,240,.85);
+  color:#475569;
+  font-size:12px;
+  font-weight:600;
+}
+.category-item{
+  transition:all .16s ease;
+}
+.category-item:hover{
+  transform:translateX(2px);
+}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#dbe4f0;border-radius:999px}
+</style>
+</head>
+<body class="antialiased">
+<div id="app" v-cloak class="min-h-screen">
+  <div v-if="view==='login'" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50/60 via-white to-sky-50/40">
+    <div class="w-full max-w-sm px-6">
+      <div class="flex items-center justify-center gap-3 mb-10">
+        <div class="logo-icon"></div>
+        <span class="text-xl font-bold bg-gradient-to-r from-accent-500 to-accent-700 bg-clip-text text-transparent tracking-wide">Interval</span>
+      </div>
+      <div class="surface-card p-8">
+        <h2 class="text-lg font-semibold text-brand-800 mb-2">欢迎回来</h2>
+        <p class="text-sm text-brand-400 mb-8">用更轻盈的方式，继续记录今天的时间。</p>
+        <transition name="fade">
+          <div v-if="loginErr" class="mb-6 px-3 py-2 bg-red-50 border border-red-100 rounded-xl">
+            <p class="text-xs text-red-600">{{loginErr}}</p>
+          </div>
+        </transition>
+        <form @submit.prevent="doLogin" class="space-y-6">
+          <div>
+            <label class="block text-[11px] font-medium text-brand-400 mb-2 tracking-wide">用户名</label>
+            <input v-model="form.user" type="text" required class="input-underline w-full py-2 text-sm text-brand-800" placeholder="请输入用户名">
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-brand-400 mb-2 tracking-wide">密码</label>
+            <input v-model="form.pass" type="password" required class="input-underline w-full py-2 text-sm text-brand-800" placeholder="请输入密码">
+          </div>
+          <button type="submit" :disabled="loading" class="btn-primary w-full py-3 rounded-2xl text-sm font-medium disabled:opacity-50">
+            <span v-if="!loading">登录</span>
+            <span v-else>登录中...</span>
+          </button>
+        </form>
+        <p class="mt-6 text-center text-xs text-brand-400">没有账号？ <a href="#" @click.prevent="view='register'" class="text-accent-600 font-medium hover:underline">注册</a></p>
+      </div>
+      <p class="mt-8 text-center text-[11px] text-brand-300">原型演示 — 输入任意凭据即可进入</p>
+    </div>
+  </div>
+
+  <div v-if="view==='register'" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50/60 via-white to-sky-50/40">
+    <div class="w-full max-w-sm px-6">
+      <div class="flex items-center justify-center gap-3 mb-10">
+        <div class="logo-icon"></div>
+        <span class="text-xl font-bold bg-gradient-to-r from-accent-500 to-accent-700 bg-clip-text text-transparent tracking-wide">Interval</span>
+      </div>
+      <div class="surface-card p-8">
+        <h2 class="text-lg font-semibold text-brand-800 mb-2">创建账号</h2>
+        <p class="text-sm text-brand-400 mb-8">先搭好属于你的时间分类，再开始记录节奏。</p>
+        <form @submit.prevent="view='login'" class="space-y-6">
+          <div>
+            <label class="block text-[11px] font-medium text-brand-400 mb-2 tracking-wide">用户名</label>
+            <input type="text" required class="input-underline w-full py-2 text-sm text-brand-800" placeholder="设置用户名">
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-brand-400 mb-2 tracking-wide">邮箱</label>
+            <input type="email" required class="input-underline w-full py-2 text-sm text-brand-800" placeholder="your@email.com">
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-brand-400 mb-2 tracking-wide">密码</label>
+            <input type="password" required class="input-underline w-full py-2 text-sm text-brand-800" placeholder="至少 8 位字符">
+          </div>
+          <button type="submit" class="btn-primary w-full py-3 rounded-2xl text-sm font-medium">注册</button>
+        </form>
+        <p class="mt-6 text-center text-xs text-brand-400">已有账号？ <a href="#" @click.prevent="view='login'" class="text-accent-600 font-medium hover:underline">登录</a></p>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="view==='dashboard'" class="dashboard-shell min-h-screen">
+    <header class="sticky top-0 z-50 border-b border-white/60 bg-white/70 backdrop-blur-xl">
+      <div class="relative z-10 max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-8">
+          <div class="flex items-center gap-3">
+            <div class="logo-icon" style="width:20px;height:20px"></div>
+            <span class="text-sm font-bold bg-gradient-to-r from-accent-500 to-accent-700 bg-clip-text text-transparent tracking-wide">Interval</span>
+          </div>
+          <div class="hidden md:flex items-center gap-2">
+            <span class="mini-chip">时间格</span>
+            <span class="mini-chip opacity-70">统计</span>
+            <span class="mini-chip opacity-70">分类</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-xs text-brand-500">{{user}}</span>
+          <button @click="view='login'" class="text-xs text-brand-400 hover:text-brand-700 transition-colors">退出</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="relative z-10 max-w-7xl mx-auto px-6 py-8">
+      <section class="grid gap-4 xl:grid-cols-[1.2fr_.8fr] mb-8">
+        <div class="surface-card hero-panel p-7 md:p-8">
+          <div class="relative z-10 max-w-2xl">
+            <div class="eyebrow mb-5">
+              <span class="eyebrow-dot"></span>
+              DAILY TIME GRID
+            </div>
+            <h1 class="text-3xl md:text-[2.7rem] font-extrabold tracking-[-0.05em] text-brand-900 leading-tight">
+              把一天拆成 96 格，
+              <br class="hidden md:block">
+              让记录变得更直观。
+            </h1>
+            <p class="mt-4 text-sm md:text-[15px] leading-7 text-brand-500 max-w-xl">
+              这个原型重点验证时间块选择、批量登记、备注回显和分类管理。视觉上我把它调整得更像正式产品：更轻、更清晰，也更有节奏感。
+            </p>
+            <div class="mt-6 flex flex-wrap gap-2.5">
+              <span class="mini-chip">拖拽连续选择</span>
+              <span class="mini-chip">单击补选跳选</span>
+              <span class="mini-chip">右侧实时编辑</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="metric-card">
+            <div class="metric-label">今日已记录</div>
+            <div class="metric-value">{{tHours}}<span class="text-lg font-semibold ml-1">h</span></div>
+            <div class="metric-help">{{tMins}} 分钟 · {{tracked}} / 96 格</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">完成度</div>
+            <div class="metric-value">{{completionRate}}%</div>
+            <div class="metric-help">按全天时间格粗略估算</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">今日分类数</div>
+            <div class="metric-value">{{usedCategoryCount}}</div>
+            <div class="metric-help">已激活分类 {{activeCats.length}} 个</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">当前选择</div>
+            <div class="metric-value">{{dragSel.length}}</div>
+            <div class="metric-help">{{dragSel.length ? dragRange : '还没有选择时间块'}}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="relative">
+            <button @click="showDatePicker=!showDatePicker" class="surface-card-soft flex items-center gap-3 px-4 py-3 group">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-brand-500 group-hover:text-accent-600"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <div class="text-left">
+                <div class="text-[11px] font-medium uppercase tracking-[0.18em] text-brand-400">当前日期</div>
+                <h2 class="text-base font-semibold text-brand-900 leading-tight">{{fmtDate}}</h2>
+                <p class="text-[11px] text-brand-400 mt-0.5">{{dayName}}</p>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-brand-400"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <transition name="fade">
+              <div v-if="showDatePicker" class="absolute top-full left-0 mt-3 z-50 surface-card p-4 w-80" @click.stop>
+                <div class="flex items-center justify-between mb-4">
+                  <button @click="calPrevMonth" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-brand-50 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  </button>
+                  <span class="text-sm font-semibold text-brand-800">{{calYear}}年 {{calMonth}}月</span>
+                  <button @click="calNextMonth" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-brand-50 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                  </button>
+                </div>
+                <div class="grid grid-cols-7 gap-1 mb-2">
+                  <div v-for="d in ['日','一','二','三','四','五','六']" class="text-center text-[11px] text-brand-400 font-medium h-8 flex items-center justify-center">{{d}}</div>
+                </div>
+                <div class="grid grid-cols-7 gap-1">
+                  <button
+                    v-for="day in calDays"
+                    :key="day.key"
+                    @click="selectDate(day)"
+                    class="h-10 flex items-center justify-center rounded-xl text-sm transition-all"
+                    :class="{
+                      'text-brand-300': !day.inMonth,
+                      'bg-accent-500 text-white font-semibold hover:bg-accent-600 shadow-lg shadow-indigo-200/60': day.isSelected,
+                      'bg-accent-100 text-accent-700 font-semibold': day.isToday && !day.isSelected,
+                      'hover:bg-gray-100': day.inMonth && !day.isSelected && !day.isToday
+                    }"
+                    :disabled="!day.inMonth"
+                  >{{day.date}}</button>
+                </div>
+                <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                  <button @click="prevDay" class="ghost-button flex-1 justify-center">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    前一天
+                  </button>
+                  <button @click="goToday" class="btn-primary flex-1 px-3 py-2 rounded-xl text-xs font-medium">今天</button>
+                  <button @click="nextDay" class="ghost-button flex-1 justify-center">
+                    后一天
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                  </button>
+                </div>
+              </div>
+            </transition>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span class="mini-chip">15 分钟 / 格</span>
+            <span class="mini-chip">备注 Hover 回显</span>
+            <span class="mini-chip">已归档分类可见</span>
+          </div>
+        </div>
+        <button @click="catPanel=!catPanel" class="ghost-button self-start lg:self-auto">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M6 12h12"/><path d="M10 18h4"/></svg>
+          {{catPanel ? '收起右侧面板' : '展开右侧面板'}}
+        </button>
+      </section>
+
+      <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div class="surface-card p-6">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+            <div>
+              <h3 class="text-lg font-semibold text-brand-900">时间网格</h3>
+              <p class="text-sm text-brand-400 mt-1">纵向看时间节奏，横向看每小时的细分状态。</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span class="mini-chip">拖拽：连续范围</span>
+              <span class="mini-chip">单击：补选 / 取消</span>
+            </div>
+          </div>
+
+          <div class="grid-board rounded-[22px] border border-white/70 px-4 py-4">
+            <div class="grid grid-cols-[52px_1fr_1fr_1fr_1fr] gap-1.5 mb-3">
+              <div></div>
+              <div class="text-center text-[10px] text-brand-300 font-medium">:00</div>
+              <div class="text-center text-[10px] text-brand-300 font-medium">:15</div>
+              <div class="text-center text-[10px] text-brand-300 font-medium">:30</div>
+              <div class="text-center text-[10px] text-brand-300 font-medium">:45</div>
+            </div>
+            <div class="max-h-[640px] overflow-y-auto pr-1" @mouseup="endDrag" @mouseleave="endDrag">
+              <div v-for="h in 24" :key="h" class="grid grid-cols-[52px_1fr_1fr_1fr_1fr] gap-1.5 mb-1.5">
+                <div class="flex items-center justify-end pr-3">
+                  <span class="text-[11px] text-brand-300 font-medium tabular-nums">{{pad(h-1)}}:00</span>
+                </div>
+                <div
+                  v-for="q in 4"
+                  :key="q"
+                  class="grid-cell h-10 rounded-xl border relative group"
+                  :class="cellClass((h-1)*4+(q-1))"
+                  :style="cellStyle((h-1)*4+(q-1))"
+                  @mousedown.prevent="startDrag((h-1)*4+(q-1))"
+                  @mouseenter="moveDrag((h-1)*4+(q-1))"
+                  @click="cellClick((h-1)*4+(q-1),$event)"
+                >
+                  <span v-if="cellFilled((h-1)*4+(q-1))" class="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-brand-700/70">
+                    {{cellLabel((h-1)*4+(q-1))}}
+                  </span>
+                  <div v-if="cellNoteRaw((h-1)*4+(q-1))" class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-10 w-52 px-3 py-2 bg-brand-900 text-white text-[11px] rounded-2xl shadow-xl pointer-events-none">
+                    <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-brand-900"></div>
+                    <p class="font-medium mb-1">{{cellCatName((h-1)*4+(q-1))}}</p>
+                    <p class="text-[10px] text-gray-300 leading-relaxed">{{cellNoteRaw((h-1)*4+(q-1))}}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <transition name="slide">
+          <div v-if="catPanel" class="space-y-5">
+            <div v-if="dragSel.length>0" class="surface-card selection-card p-5">
+              <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <div class="selection-badge">当前选择中</div>
+                  <h3 class="text-base font-semibold text-brand-900 mt-3">已选择时间块</h3>
+                  <p class="text-sm text-brand-400 mt-1">{{dragRange}}</p>
+                </div>
+                <button @click="clearSelection" class="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  清空
+                </button>
+              </div>
+
+              <div class="mb-4 px-3 py-2 rounded-2xl bg-blue-50 border border-blue-200">
+                <p class="text-[11px] text-blue-700">提示：拖拽会重建选择范围，单击适合补选和微调。</p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="surface-card-soft p-3">
+                  <div class="text-[11px] text-brand-400 font-medium">选中数量</div>
+                  <div class="text-lg font-semibold text-brand-900 mt-1">{{dragSel.length}} 个</div>
+                </div>
+                <div class="surface-card-soft p-3">
+                  <div class="text-[11px] text-brand-400 font-medium">总时长</div>
+                  <div class="text-lg font-semibold text-brand-900 mt-1">{{Math.floor(dragSel.length*15/60)}}小时 {{(dragSel.length*15)%60}}分钟</div>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <p class="text-[11px] font-medium text-brand-400 mb-2">时间段分布</p>
+                <div class="space-y-2">
+                  <div v-for="(seg,idx) in timeSegments" :key="idx" class="surface-card-soft flex items-center justify-between p-3">
+                    <div class="flex items-center gap-2">
+                      <div class="w-2 h-2 rounded-full bg-accent-500"></div>
+                      <span class="text-xs font-medium text-brand-700">{{seg.range}}</span>
+                    </div>
+                    <span class="text-[11px] text-accent-600 font-semibold">{{seg.count}} 个</span>
+                  </div>
+                </div>
+              </div>
+
+              <transition name="fade">
+                <div v-if="hasOverlap" class="mb-4 space-y-2">
+                  <div class="px-3 py-3 bg-orange-50 border border-orange-200 rounded-2xl">
+                    <p class="text-xs text-orange-700 font-medium mb-1">检测到已有记录</p>
+                    <p class="text-[11px] text-orange-600">选中的 {{overlapCount}} 个块已登记，保存时会执行覆盖。</p>
+                  </div>
+                  <button @click="eraseSelectedSlots" class="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl border border-red-200 bg-red-50 text-xs font-medium text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    擦除已登记数据
+                  </button>
+                </div>
+              </transition>
+
+              <div class="mb-4">
+                <p class="text-xs font-medium text-brand-500 mb-2">选择分类</p>
+                <div class="mb-2 text-[11px] text-brand-400">
+                  <span v-if="selectionCategoryMode==='mixed'">当前选择包含多个分类，请重新指定一个统一分类。</span>
+                  <span v-else-if="selectionCategoryMode==='single'">当前选择可识别为同一分类，已自动回显。</span>
+                  <span v-else>当前选择还没有统一分类，保存时会按你新选的分类写入。</span>
+                </div>
+                <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  <div
+                    v-for="cat in activeCats"
+                    :key="cat.id"
+                    class="category-item flex items-center gap-2.5 px-3 py-2.5 rounded-2xl cursor-pointer transition-all"
+                    :class="modalCat&&modalCat.id===cat.id?'bg-accent-50 ring-1 ring-accent-200 shadow-sm':'hover:bg-white/70'"
+                    @click="modalCat=cat"
+                  >
+                    <div class="w-3 h-3 rounded-full" :style="{background:cat.color}"></div>
+                    <span class="text-xs font-medium text-brand-700">{{cat.name}}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <p class="text-xs font-medium text-brand-500 mb-2">备注</p>
+                <textarea v-model="modalNote" @input="noteTouched=true" rows="3" class="w-full text-xs border border-gray-200 rounded-2xl px-3 py-3 outline-none focus:border-accent-300 focus:ring-2 focus:ring-accent-100 resize-none text-brand-800 placeholder:text-brand-300 bg-white/80" :placeholder="notePlaceholder"></textarea>
+                <p class="mt-2 text-[11px] text-brand-400">
+                  <span v-if="selectionNoteMode==='mixed'">当前选择包含不同备注；如果不修改这里，保存时会保留原备注。</span>
+                  <span v-else-if="selectionNoteMode==='single'">已自动回显统一备注；如果修改，将批量覆盖所有选中块。</span>
+                  <span v-else>留空可不写备注；如果你主动清空并保存，会移除选中块的备注。</span>
+                </p>
+              </div>
+
+              <div class="flex gap-2">
+                <button @click="saveSlot" :disabled="!modalCat" class="btn-primary flex-1 py-3 rounded-2xl text-xs font-medium disabled:opacity-30">{{hasOverlap?'确认覆盖':'保存记录'}}</button>
+                <button @click="clearSelection" class="ghost-button px-4 justify-center">取消</button>
+              </div>
+            </div>
+
+            <div v-else class="surface-card selection-empty p-5">
+              <h3 class="text-base font-semibold text-brand-900">先选一个时间块</h3>
+              <p class="text-sm text-brand-400 mt-2 leading-6">右侧面板会展示摘要、分类和备注编辑。现在这个区域先保留为空状态，帮助用户理解下一步该做什么。</p>
+              <div class="mt-4 space-y-2 text-xs text-brand-500">
+                <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-accent-500"></span>拖拽：快速选择连续时间</div>
+                <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-accent-500"></span>单击：补选离散时间块</div>
+                <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-accent-500"></span>悬停：查看已记录备注</div>
+              </div>
+            </div>
+
+            <div class="surface-card p-5">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-base font-semibold text-brand-900">分类管理</h3>
+                  <p class="text-sm text-brand-400 mt-1">保持颜色统一，让时间块一眼可读。</p>
+                </div>
+                <button @click="addingCat=true" class="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-50 transition-colors text-brand-400 text-lg leading-none">+</button>
+              </div>
+
+              <transition name="fade">
+                <div v-if="addingCat" class="mb-4 p-4 bg-brand-50 rounded-2xl border border-brand-100">
+                  <input v-model="newCatName" type="text" placeholder="分类名称" class="w-full text-sm bg-transparent border-none outline-none text-brand-800 placeholder:text-brand-300 mb-3">
+                  <div class="flex items-center gap-2 mb-3 flex-wrap">
+                    <button v-for="c in palette" :key="c" @click="newCatColor=c" class="w-6 h-6 rounded-full transition-transform" :class="newCatColor===c?'scale-125 ring-2 ring-offset-2 ring-accent-300':'hover:scale-110'" :style="{background:c}"></button>
+                  </div>
+                  <div class="flex gap-2">
+                    <button @click="addCat" class="btn-primary px-4 py-2 rounded-xl text-[11px] font-medium">添加</button>
+                    <button @click="addingCat=false;newCatName=''" class="ghost-button px-4 py-2 text-[11px]">取消</button>
+                  </div>
+                </div>
+              </transition>
+
+              <div class="space-y-2">
+                <div
+                  v-for="cat in cats"
+                  :key="cat.id"
+                  class="category-item flex items-center gap-3 px-3 py-3 rounded-2xl cursor-pointer transition-all"
+                  :class="selCat&&selCat.id===cat.id?'bg-accent-50 ring-1 ring-accent-200 shadow-sm':'hover:bg-brand-50/70'"
+                  @click="selCat=(selCat&&selCat.id===cat.id)?null:cat"
+                >
+                  <div class="w-3 h-3 rounded-full flex-shrink-0" :style="{background:cat.color}"></div>
+                  <span class="text-sm font-medium text-brand-700 flex-1 truncate" :class="{'line-through opacity-40':cat.archived}">{{cat.name}}</span>
+                  <span v-if="cat.archived" class="text-[10px] px-2 py-1 rounded-full bg-brand-100 text-brand-500">已归档</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </transition>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, computed, watch } = Vue;
+
+createApp({
+  setup() {
+    const view = ref('login');
+    const user = ref('');
+    const loading = ref(false);
+    const loginErr = ref('');
+    const form = ref({ user: '', pass: '' });
+
+    const date = ref(new Date());
+    const catPanel = ref(true);
+    const addingCat = ref(false);
+    const selCat = ref(null);
+    const modalCat = ref(null);
+    const modalNote = ref('');
+    const noteTouched = ref(false);
+    const newCatName = ref('');
+    const newCatColor = ref('#c4b5fd');
+    const showDatePicker = ref(false);
+
+    const palette = ['#c4b5fd', '#a5b4fc', '#93c5fd', '#86efac', '#fde68a', '#fdba74', '#fca5a5', '#f0abfc'];
+    const cats = ref([
+      { id: 1, name: '工作', color: '#a5b4fc', archived: false },
+      { id: 2, name: '睡眠', color: '#c4b5fd', archived: false },
+      { id: 3, name: '运动', color: '#86efac', archived: false },
+      { id: 4, name: '阅读', color: '#fde68a', archived: false },
+      { id: 5, name: '社交', color: '#fdba74', archived: false },
+      { id: 6, name: '通勤', color: '#93c5fd', archived: false },
+      { id: 7, name: '旧爱好', color: '#fca5a5', archived: true }
+    ]);
+
+    const slots = ref({});
+    const notes = ref({});
+    const dragging = ref(false);
+    const dragStart = ref(-1);
+    const dragEnd = ref(-1);
+    const dragSel = ref([]);
+
+    const activeCats = computed(() => cats.value.filter(cat => !cat.archived));
+    const dk = computed(() => {
+      const current = date.value;
+      return `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+    });
+    const fmtDate = computed(() => date.value.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', year: 'numeric' }));
+    const dayName = computed(() => date.value.toLocaleDateString('zh-CN', { weekday: 'long' }));
+    const tracked = computed(() => Object.keys(slots.value[dk.value] || {}).length);
+    const tHours = computed(() => Math.floor(tracked.value * 15 / 60));
+    const tMins = computed(() => (tracked.value * 15) % 60);
+    const completionRate = computed(() => Math.round((tracked.value / 96) * 100));
+    const usedCategoryCount = computed(() => new Set(Object.values(slots.value[dk.value] || {})).size);
+    const selectionDetails = computed(() => dragSel.value.map(index => {
+      const cat = getCat(index);
+      const note = notes.value[`${dk.value}_${index}`] || '';
+      return {
+        index,
+        cat,
+        catId: cat ? cat.id : null,
+        note
+      };
+    }));
+    const selectionCategoryIds = computed(() => [...new Set(selectionDetails.value.filter(item => item.catId !== null).map(item => item.catId))]);
+    const selectionCategoryMode = computed(() => {
+      if (selectionDetails.value.length === 0) return 'empty';
+      if (selectionCategoryIds.value.length === 0) return 'empty';
+      if (selectionCategoryIds.value.length === 1) return 'single';
+      return 'mixed';
+    });
+    const selectionNoteValues = computed(() => [...new Set(selectionDetails.value.map(item => item.note))]);
+    const selectionNoteMode = computed(() => {
+      if (selectionDetails.value.length === 0) return 'empty';
+      if (selectionNoteValues.value.length === 1) {
+        return selectionNoteValues.value[0] ? 'single' : 'empty';
+      }
+      return 'mixed';
+    });
+    const notePlaceholder = computed(() => {
+      if (selectionNoteMode.value === 'mixed') return '当前选择包含不同备注；输入后会统一覆盖...';
+      if (selectionNoteMode.value === 'single') return '已回显统一备注';
+      return '这段时间做了什么...';
+    });
+
+    const dragRange = computed(() => {
+      if (dragSel.value.length === 0) return '还没有选择时间块';
+      const minIndex = Math.min(...dragSel.value);
+      const maxIndex = Math.max(...dragSel.value);
+      return `${slotTime(minIndex).split(' — ')[0]} — ${slotTime(maxIndex).split(' — ')[1]}`;
+    });
+
+    const timeSegments = computed(() => {
+      if (dragSel.value.length === 0) return [];
+      const sorted = [...dragSel.value].sort((a, b) => a - b);
+      const segments = [];
+      let start = sorted[0];
+      let end = sorted[0];
+      let count = 1;
+
+      for (let index = 1; index < sorted.length; index += 1) {
+        if (sorted[index] === end + 1) {
+          end = sorted[index];
+          count += 1;
+        } else {
+          segments.push({
+            start,
+            end,
+            count,
+            range: `${slotTime(start).split(' — ')[0]} — ${slotTime(end).split(' — ')[1]}`
+          });
+          start = sorted[index];
+          end = sorted[index];
+          count = 1;
+        }
+      }
+
+      segments.push({
+        start,
+        end,
+        count,
+        range: `${slotTime(start).split(' — ')[0]} — ${slotTime(end).split(' — ')[1]}`
+      });
+
+      return segments;
+    });
+
+    const hasOverlap = computed(() => {
+      if (dragSel.value.length === 0) return false;
+      const daySlots = slots.value[dk.value] || {};
+      return dragSel.value.some(index => daySlots[index] !== undefined);
+    });
+
+    const overlapCount = computed(() => {
+      if (dragSel.value.length === 0) return 0;
+      const daySlots = slots.value[dk.value] || {};
+      return dragSel.value.filter(index => daySlots[index] !== undefined).length;
+    });
+
+    watch(dragSel, syncSelectionEditor, { deep: true });
+
+    const calYear = computed(() => date.value.getFullYear());
+    const calMonth = computed(() => date.value.getMonth() + 1);
+    const calDays = computed(() => {
+      const year = date.value.getFullYear();
+      const month = date.value.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const prevMonthDays = new Date(year, month, 0).getDate();
+      const result = [];
+
+      for (let index = firstDay - 1; index >= 0; index -= 1) {
+        result.push({ date: prevMonthDays - index, inMonth: false, key: `prev-${index}` });
+      }
+
+      const today = new Date();
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const isToday = year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+        const isSelected = year === date.value.getFullYear() && month === date.value.getMonth() && day === date.value.getDate();
+        result.push({ date: day, inMonth: true, isToday, isSelected, key: `cur-${day}`, fullDate: new Date(year, month, day) });
+      }
+
+      const remaining = 42 - result.length;
+      for (let day = 1; day <= remaining; day += 1) {
+        result.push({ date: day, inMonth: false, key: `next-${day}` });
+      }
+
+      return result;
+    });
+
+    function pad(value) {
+      return String(value).padStart(2, '0');
+    }
+
+    function prevDay() {
+      const next = new Date(date.value);
+      next.setDate(next.getDate() - 1);
+      date.value = next;
+      dragSel.value = [];
+      showDatePicker.value = false;
+    }
+
+    function nextDay() {
+      const next = new Date(date.value);
+      next.setDate(next.getDate() + 1);
+      date.value = next;
+      dragSel.value = [];
+      showDatePicker.value = false;
+    }
+
+    function goToday() {
+      date.value = new Date();
+      dragSel.value = [];
+      showDatePicker.value = false;
+    }
+
+    function calPrevMonth() {
+      const next = new Date(date.value);
+      next.setMonth(next.getMonth() - 1);
+      date.value = next;
+    }
+
+    function calNextMonth() {
+      const next = new Date(date.value);
+      next.setMonth(next.getMonth() + 1);
+      date.value = next;
+    }
+
+    function selectDate(day) {
+      if (!day.inMonth || !day.fullDate) return;
+      date.value = day.fullDate;
+      showDatePicker.value = false;
+      dragSel.value = [];
+    }
+
+    function getCat(index) {
+      const daySlots = slots.value[dk.value];
+      if (!daySlots || !daySlots[index]) return null;
+      return cats.value.find(cat => cat.id === daySlots[index]) || null;
+    }
+
+    function syncSelectionEditor() {
+      noteTouched.value = false;
+
+      if (dragSel.value.length === 0) {
+        modalCat.value = null;
+        modalNote.value = '';
+        return;
+      }
+
+      if (selectionCategoryMode.value === 'single') {
+        modalCat.value = cats.value.find(cat => cat.id === selectionCategoryIds.value[0]) || null;
+      } else {
+        modalCat.value = null;
+      }
+
+      if (selectionNoteMode.value === 'single') {
+        modalNote.value = selectionNoteValues.value[0] || '';
+      } else {
+        modalNote.value = '';
+      }
+    }
+
+    function cellFilled(index) {
+      return !!getCat(index);
+    }
+
+    function cellLabel(index) {
+      const cat = getCat(index);
+      if (!cat) return '';
+      return cat.name.length > 3 ? `${cat.name.substring(0, 3)}...` : cat.name;
+    }
+
+    function cellClass(index) {
+      const filled = cellFilled(index);
+      const selected = dragSel.value.includes(index);
+      const draggingRange = dragging.value && isDragRange(index);
+      if (selected) return 'selected';
+      if (draggingRange) return 'dragging border-accent-200';
+      if (filled) return 'border-transparent';
+      return 'border-gray-100/80';
+    }
+
+    function cellStyle(index) {
+      const cat = getCat(index);
+      return cat ? { background: `${cat.color}40`, borderColor: `${cat.color}60` } : {};
+    }
+
+    function isDragRange(index) {
+      if (dragStart.value < 0) return false;
+      const minIndex = Math.min(dragStart.value, dragEnd.value);
+      const maxIndex = Math.max(dragStart.value, dragEnd.value);
+      return index >= minIndex && index <= maxIndex;
+    }
+
+    function startDrag(index) {
+      dragging.value = true;
+      dragStart.value = index;
+      dragEnd.value = index;
+    }
+
+    function cellClick(index) {
+      if (dragging.value) return;
+
+      if (dragSel.value.includes(index)) {
+        dragSel.value = dragSel.value.filter(item => item !== index);
+      } else {
+        dragSel.value.push(index);
+        catPanel.value = true;
+      }
+    }
+
+    function moveDrag(index) {
+      if (dragging.value) dragEnd.value = index;
+    }
+
+    function endDrag() {
+      if (!dragging.value) return;
+
+      const isClick = dragStart.value === dragEnd.value;
+      if (isClick) {
+        dragging.value = false;
+        dragStart.value = -1;
+        dragEnd.value = -1;
+        return;
+      }
+
+      dragging.value = false;
+      const minIndex = Math.min(dragStart.value, dragEnd.value);
+      const maxIndex = Math.max(dragStart.value, dragEnd.value);
+      const selection = [];
+      for (let index = minIndex; index <= maxIndex; index += 1) selection.push(index);
+      dragSel.value = selection;
+      dragStart.value = -1;
+      dragEnd.value = -1;
+
+      catPanel.value = true;
+    }
+
+    function cellNoteRaw(index) {
+      return notes.value[`${dk.value}_${index}`] || '';
+    }
+
+    function cellCatName(index) {
+      const cat = getCat(index);
+      return cat ? cat.name : '';
+    }
+
+    function clearSelection() {
+      dragSel.value = [];
+      modalCat.value = null;
+      modalNote.value = '';
+      noteTouched.value = false;
+    }
+
+    function eraseSelectedSlots() {
+      if (!slots.value[dk.value]) return;
+      dragSel.value.forEach(index => {
+        delete slots.value[dk.value][index];
+        delete notes.value[`${dk.value}_${index}`];
+      });
+      clearSelection();
+    }
+
+    function slotTime(index) {
+      const hour = Math.floor(index / 4);
+      const minute = (index % 4) * 15;
+      const endHour = minute + 15 === 60 ? hour + 1 : hour;
+      const endMinute = minute + 15 === 60 ? 0 : minute + 15;
+      return `${pad(hour)}:${pad(minute)} — ${pad(endHour)}:${pad(endMinute)}`;
+    }
+
+    function saveSlot() {
+      if (!modalCat.value) return;
+      if (!slots.value[dk.value]) slots.value[dk.value] = {};
+      const targets = dragSel.value.length > 0 ? dragSel.value : [];
+      targets.forEach(index => {
+        slots.value[dk.value][index] = modalCat.value.id;
+        if (noteTouched.value) {
+          if (modalNote.value.trim()) {
+            notes.value[`${dk.value}_${index}`] = modalNote.value.trim();
+          } else {
+            delete notes.value[`${dk.value}_${index}`];
+          }
+        }
+      });
+      clearSelection();
+    }
+
+    function addCat() {
+      if (!newCatName.value.trim()) return;
+      const id = Math.max(...cats.value.map(cat => cat.id)) + 1;
+      cats.value.push({ id, name: newCatName.value.trim(), color: newCatColor.value, archived: false });
+      newCatName.value = '';
+      addingCat.value = false;
+    }
+
+    function doLogin() {
+      loginErr.value = '';
+      if (!form.value.user.trim() || !form.value.pass.trim()) {
+        loginErr.value = '请填写所有字段';
+        return;
+      }
+      loading.value = true;
+      setTimeout(() => {
+        user.value = form.value.user;
+        view.value = 'dashboard';
+        loading.value = false;
+        seedDemo();
+      }, 500);
+    }
+
+    function seedDemo() {
+      const key = dk.value;
+      slots.value[key] = {};
+      for (let index = 0; index < 28; index += 1) slots.value[key][index] = 2;
+      for (let index = 36; index < 48; index += 1) slots.value[key][index] = 1;
+      for (let index = 48; index < 52; index += 1) slots.value[key][index] = 3;
+      for (let index = 52; index < 60; index += 1) slots.value[key][index] = 1;
+      for (let index = 60; index < 64; index += 1) slots.value[key][index] = 4;
+      for (let index = 64; index < 68; index += 1) slots.value[key][index] = 6;
+      for (let index = 68; index < 72; index += 1) slots.value[key][index] = 1;
+      for (let index = 72; index < 76; index += 1) slots.value[key][index] = 5;
+      notes.value[`${key}_36`] = '处理邮件和晨会';
+      notes.value[`${key}_48`] = '晨跑 5公里';
+      notes.value[`${key}_60`] = '看《原子习惯》第三章';
+    }
+
+    return {
+      view,
+      user,
+      loading,
+      loginErr,
+      form,
+      date,
+      catPanel,
+      addingCat,
+      selCat,
+      modalCat,
+      modalNote,
+      noteTouched,
+      newCatName,
+      newCatColor,
+      palette,
+      cats,
+      slots,
+      notes,
+      dragging,
+      dragSel,
+      activeCats,
+      tracked,
+      fmtDate,
+      dayName,
+      tHours,
+      tMins,
+      completionRate,
+      usedCategoryCount,
+      selectionCategoryMode,
+      selectionNoteMode,
+      notePlaceholder,
+      dragRange,
+      timeSegments,
+      hasOverlap,
+      overlapCount,
+      showDatePicker,
+      calYear,
+      calMonth,
+      calDays,
+      pad,
+      prevDay,
+      nextDay,
+      goToday,
+      calPrevMonth,
+      calNextMonth,
+      selectDate,
+      cellFilled,
+      cellLabel,
+      cellNoteRaw,
+      cellCatName,
+      cellClass,
+      cellStyle,
+      startDrag,
+      cellClick,
+      moveDrag,
+      endDrag,
+      clearSelection,
+      eraseSelectedSlots,
+      saveSlot,
+      addCat,
+      doLogin
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

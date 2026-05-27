@@ -1,0 +1,17 @@
+# Enable with: SPRING_PROFILES_ACTIVE=mysql
+spring:
+  datasource:
+    url: ${MYSQL_JDBC_URL:jdbc:mysql://localhost:3306/interval?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${MYSQL_USERNAME:interval}
+    password: ${MYSQL_PASSWORD:interval}
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: ${MYSQL_DDL_AUTO:update}
+    show-sql: ${MYSQL_SHOW_SQL:false}
+
+  h2:
+    console:
+      enabled: false

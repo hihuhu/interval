@@ -52,6 +52,7 @@ logs/
 .env.*
 !.env.example
 !.env.sample
+!interval-server/.env.mysql.example
 
 # =========================
 # Java / Gradle (interval-server)
@@ -66,6 +67,7 @@ interval-server/.project
 interval-server/.settings/
 interval-server/**/*.class
 interval-server/**/*.jar
+!interval-server/gradle/wrapper/gradle-wrapper.jar
 interval-server/**/*.war
 interval-server/**/*.ear
 interval-server/hs_err_pid*

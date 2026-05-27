@@ -1,3 +1,12 @@
 Monorepo: interval-server (Spring Boot 3, Java 17) + interval-client (Vue 3, TypeScript).
 Design docs: docs/design/. UI prototypes: docs/prototypes/.
 Rule: For any feature, update docs/design/ first → write tests → implement. No exceptions.
+
+## 项目操作日志规则
+- 每次会话开始时，必须先阅读 PROJECT_LOG.md 了解项目历史
+- 每次会话结束前，必须更新 PROJECT_LOG.md 记录本次操作
+- 日志格式必须遵循统一模板（目标、操作、决策、问题、待办、涉及文件）
+- 新记录添加在文件最上方（时间倒序）
+- 技术决策必须说明原因和影响
+- 待办事项使用 Markdown 任务列表格式 [ ]
+- 新窗口启动时应先查看 QUICK_START.md 快速上手
