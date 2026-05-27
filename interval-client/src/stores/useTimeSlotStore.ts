@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import * as timeSlotService from '@/services/timeSlotService';
-import type { TimeSlotDto, UpsertTimeSlotRequest } from '@/types/timeSlot';
+import type { BatchDeleteTimeSlotResponseDto, TimeSlotDto, UpsertTimeSlotRequest } from '@/types/timeSlot';
 import { todayIsoDate } from '@/composables/useTimeSlots';
 
 export const useTimeSlotStore = defineStore('timeSlot', () => {
@@ -38,18 +38,31 @@ export const useTimeSlotStore = defineStore('timeSlot', () => {
     }
   }
 
-  async function upsertSlotRange(date: string, slotIndexes: number[], activityName: string, categoryId: number) {
+  async function upsertSlotRange(
+    date: string,
+    slotIndexes: number[],
+    activityName: string,
+    categoryId: number,
+    options: { note?: string | null; noteTouched?: boolean } = {},
+  ) {
     if (slotIndexes.length === 0) {
       return [];
     }
 
     saving.value = true;
     try {
-      const savedSlots: TimeSlotDto[] = [];
-      for (const slotIndex of slotIndexes) {
-        savedSlots.push(await saveSlot({ date, slotIndex, activityName, categoryId }));
-      }
-      return savedSlots;
+      const response = await timeSlotService.upsertTimeSlotBatch({
+        date,
+        slots: slotIndexes.map((slotIndex) => ({
+          slotIndex,
+          activityName,
+          categoryId,
+          note: options.note,
+          noteTouched: options.noteTouched,
+        })),
+      });
+      mergeSlots(response.slots);
+      return response.slots;
     } finally {
       saving.value = false;
     }
@@ -70,6 +83,22 @@ export const useTimeSlotStore = defineStore('timeSlot', () => {
     return result;
   }
 
+  async function deleteSlotBatch(slotIds: number[]): Promise<BatchDeleteTimeSlotResponseDto> {
+    if (slotIds.length === 0) {
+      return { deletedCount: 0, slotIds: [] };
+    }
+
+    const result = await timeSlotService.deleteTimeSlotBatch({ slotIds });
+    slots.value = slots.value.filter((slot) => !result.slotIds.includes(slot.id));
+    return result;
+  }
+
+  function mergeSlots(savedSlots: TimeSlotDto[]) {
+    const savedIndexes = new Set(savedSlots.map((slot) => slot.slotIndex));
+    slots.value = [...slots.value.filter((slot) => !savedIndexes.has(slot.slotIndex)), ...savedSlots]
+      .sort((a, b) => a.slotIndex - b.slotIndex);
+  }
+
   return {
     selectedDate,
     slots,
@@ -82,5 +111,6 @@ export const useTimeSlotStore = defineStore('timeSlot', () => {
     upsertSlot,
     upsertSlotRange,
     deleteSlot,
+    deleteSlotBatch,
   };
 });

@@ -11,6 +11,23 @@
 
 ---
 
+## 13. Formal Vue UI iteration note
+
+The latest implementation-facing UI decisions for the Time Grid v2 workstation are recorded in:
+
+- `docs/design/time-grid-v2-ui-iteration-2026-05-27.md`
+
+Summary:
+
+- Time cells are compact 40px grid units.
+- Empty cells render no visible text.
+- Occupied cells render only the category label.
+- Selected cells use a light indigo fill plus clear inset outline.
+- Rejected selected-state treatments: heavy purple overlay, too-pale fill, corner marker, and bottom underline.
+- The right-side category selector is a visible category list with radio semantics, not a native dropdown.
+
+---
+
 ## 2. 核心改进
 
 ### 2.1 日期选择器重新设计
@@ -103,11 +120,13 @@
 
 **模式1：拖拽选择（连续块）**
 - 按住鼠标拖拽，选中连续的时间块
-- 开始新拖拽时，自动清空之前的选择
+- 按下鼠标时只进入候选拖拽状态，不立即清空旧选择
+- 拖到不同时间块并松开后，用新的连续范围替换之前的选择
 
 **模式2：单击选择（跳选不连续块）**
 - 单击未选中的块：添加到选择集
 - 单击已选中的块：从选择集中移除
+- 真实浏览器单击会触发 `pointerdown -> pointerup -> click`，单击语义必须由最终 `click` 决定，不能在 `pointerdown` 阶段清空选择
 
 **模式3：混合使用**
 - 先拖拽选择一段，再单击添加其他块
@@ -284,6 +303,26 @@
 | 已选A→C | 单击块D | 块D变深蓝遮罩 | 添加不连续块 |
 | 已选A→C、D | 拖拽E→F | 全部清空，E→F变蓝色遮罩 | 重新拖选 |
 | 选中内容包含已登记块 | 点击右侧“擦除已登记数据” | 删除选中块中已有数据的记录，未登记块不受影响 | 用于清理误填数据 |
+
+#### 正式 Vue 实现状态（2026-05-27）
+
+正式 Vue 页面已按上述规则修正。当前实现要点：
+
+- `useSlotSelection.beginDrag()` 只记录拖拽起点，不清空 `selectedSlotIndexes`。
+- `useSlotSelection.endDrag()` 只有在起点和终点形成 2 个及以上时间块范围时，才将选择集替换为该连续范围。
+- `clickSlot()` 负责单击追加与再次单击取消。
+- 拖拽结束后浏览器补发的 `click` 会被 `suppressClickSlotIndex` 抑制，避免刚拖出的范围被末尾点击取消。
+- `TimeGrid` 在网格层监听 `pointermove` / `mousemove`，通过 `document.elementFromPoint(...).closest('[data-slot-index]')` 识别坐标下的时间块，解决真实拖拽不稳定的问题。
+
+已验证场景：
+
+| 场景 | 期望结果 | 验证方式 |
+| --- | --- | --- |
+| 单击 12、20，再单击 12 | 最终只选中 20 | `TimeGrid.test.ts` |
+| 先点选 8，再拖选 30→33 | 最终选中 `[30,31,32,33]` | `TimeGrid.test.ts` |
+| 拖选 8→10，再真实点选 32 | 最终选中 `[8,9,10,32]` | `TimeGrid.test.ts` |
+| 拖选 8→10，再真实点选 16，再点 16 | 先得到 `[8,9,10,16]`，再回到 `[8,9,10]` | in-app browser |
+| 坐标拖拽 30→33 | 最终选中 `[30,31,32,33]` | `TimeGrid.test.ts` |
 
 #### 右侧擦除功能
 

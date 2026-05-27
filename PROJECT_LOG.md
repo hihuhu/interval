@@ -4,6 +4,132 @@
 
 ---
 
+## [2026-05-27] Time Grid v2 UI iteration note
+
+Latest implementation-facing UI decisions are documented in:
+
+- `docs/design/time-grid-v2-ui-iteration-2026-05-27.md`
+
+Summary:
+
+- Compact time cells: 40px height, blank cells show no visible text, occupied cells show only category labels.
+- Selected cells: light indigo fill plus clear inset outline.
+- Rejected selected states: heavy purple overlay, too-pale fill, corner marker, bottom underline.
+- Right-side category selector: prototype-style visible category list, not a native dropdown.
+- Verified with `npm run test -- src/__tests__/SelectionEditorPanel.test.ts src/__tests__/TimeGrid.test.ts src/__tests__/slotSelection.test.ts` and `npm run build`.
+
+---
+
+## [2026-05-27] Time Grid v2 真实交互修复与文档同步
+
+### 📋 本次目标
+- 继续按 `modern-time-grid-v2.html` 原型修正正式 Vue 页面，重点解决中间时间块布局、顶部文案、拖选和点选真实浏览器交互问题。
+
+### ✅ 已完成操作
+- ✅ 将正式 `TimeGrid` 中间网格改为原型结构：24 行小时，每小时 4 个 15 分钟块，并显示左侧小时标签与顶部 `:00 / :15 / :30 / :45`。
+- ✅ 将 `TimeGridView` 顶部 Hero 文案对齐原型：“把一天拆成 96 格，让记录变得更直观。”
+- ✅ 修复真实浏览器点选事件序列导致的选择丢失问题：`pointerdown -> pointerup -> click` 不再在按下时清空已有选择。
+- ✅ 增强拖拽选择：网格层通过 `document.elementFromPoint` 按坐标识别当前时间块，避免只依赖 `pointerenter`。
+- ✅ 修复 `TimeSlotCell` 删除按钮模板属性，确保已登记块删除入口可正常渲染。
+- ✅ 补充选择交互回归测试，覆盖真实点选、拖选后点选追加、再次点选取消、坐标拖拽范围识别。
+
+### 🔧 技术决策
+- **决策**：`beginDrag()` 不再立即清空 `selectedSlotIndexes`。
+- **原因**：真实浏览器的单击会先触发 `pointerdown`，如果按下即清空，会导致“拖选后再点选追加”丢失原拖选范围。
+- **影响**：只有拖到不同时间块并在 `endDrag()` 确认形成连续范围时，才用新拖拽范围替换旧选择；单击则继续走 `clickSlot()` 做追加或取消。
+
+- **决策**：正式网格保留原型的“小时行 + 4 个季度块”结构，而不是简单 `repeat(4)` 平铺 96 个块。
+- **原因**：原型表达的是按小时纵向扫描，横向查看同一小时内四个 15 分钟块。
+- **影响**：桌面端第一小时固定只显示 4 个块，第二小时换新行；移动端在网格内部横向滚动以保持 4 列语义。
+
+### ✅ 验证结果
+- ✅ 前端选择相关测试：`npm run test -- src/__tests__/TimeGrid.test.ts src/__tests__/slotSelection.test.ts`，2 个测试文件 / 11 个测试通过。
+- ✅ 前端生产构建：`npm run build` 通过。
+- ✅ in-app browser 真实验证：
+  - `/time-grid` 共渲染 96 个时间块。
+  - 第一小时只包含 slot `0,1,2,3`，第 5 个块进入第二小时新行。
+  - 拖选 `8-10` 后再点选 `16`，选中 `[8,9,10,16]`。
+  - 再次点选 `16` 后取消，回到 `[8,9,10]`。
+
+### 📝 下次待办
+- [ ] 继续按原型细化右侧选择编辑面板的视觉密度、按钮状态和表单反馈。
+- [ ] 补做保存/覆盖/擦除的真实浏览器冒烟：拖选、点选、保存备注、混合选择、擦除已登记块。
+- [ ] 主流程稳定后，再回到分类耗时统计功能。
+
+### 📂 涉及文件
+- `interval-client/src/views/TimeGridView.vue`
+- `interval-client/src/components/TimeGrid.vue`
+- `interval-client/src/components/TimeSlotCell.vue`
+- `interval-client/src/composables/useSlotSelection.ts`
+- `interval-client/src/__tests__/TimeGrid.test.ts`
+- `interval-client/src/__tests__/slotSelection.test.ts`
+- `PROJECT_LOG.md`
+- `docs/design/sdd-frontend-prototype-v2.md`
+- `docs/prototypes/README.md`
+
+---
+
+## [2026-05-26] Time Grid 正式页面按 v2 原型重做
+
+### 📋 本次目标
+- 暂停统计功能实现，先把已完成的 Time Grid、分类管理和时间块编辑能力按 `modern-time-grid-v2.html` 的新原型重做迭代。
+
+### ✅ 已完成操作
+- ✅ 将正式 `TimeGridView` 重构为工作台式布局：顶部 Hero、日期切换、指标卡、左侧 96 格网格、右侧编辑与分类管理双面板。
+- ✅ 新增 `useSlotSelection`，支持点击跳选、再次点击取消、拖拽连续选择、拖拽清空旧选择、拖拽后继续追加不连续块。
+- ✅ 新增 `SelectionEditorPanel`，替代旧弹窗编辑流，支持选择摘要、分类回显、备注输入、混合分类/混合备注提示、保存和擦除已登记块。
+- ✅ 新增 `CategoryManagerPanel`，将分类新建、编辑、删除/归档入口整合到右侧工作台。
+- ✅ 清理旧的 `SlotEditorModal` 与 `CategorySelect` 弹窗流程组件及其测试。
+- ✅ 后端 TimeSlot 新增 `note` 字段，并在 `TimeSlotDto` / `UpsertTimeSlotRequest` 中透出。
+- ✅ 新增后端批量保存 API：`POST /api/time-slots/batch`。
+- ✅ 新增后端批量删除 API：`DELETE /api/time-slots/batch`。
+- ✅ 前端 `timeSlotService` 与 `useTimeSlotStore` 接入批量保存、批量删除、备注保留/覆盖语义。
+- ✅ 新增并更新前后端测试，覆盖选择状态机、右侧编辑面板、分类面板、前端 service/store、后端 note/batch/delete。
+
+### 🔧 技术决策
+- **决策**：正式页面用右侧常驻面板替代旧弹窗。
+- **原因**：与 v2 原型一致，减少记录过程中的上下文打断。
+- **影响**：旧 `SlotEditorModal` 主流程已移除，后续时间块编辑统一从 `SelectionEditorPanel` 进入。
+
+- **决策**：批量保存中加入 `noteTouched` 标志。
+- **原因**：需要区分“用户没有改备注”和“用户主动清空备注”，以支持混合备注时保留原备注。
+- **影响**：未触碰备注时只更新分类/活动名，主动编辑或清空才批量覆盖备注。
+
+- **决策**：批量擦除先按已登记 slot id 删除，不对未登记块发请求。
+- **原因**：符合原型“只擦除当前选中块中已有登记数据”的规则，也避免无意义请求。
+- **影响**：前端会从当前选择中筛出已登记块再调用批量删除 API。
+
+### ⚠️ 遇到的问题
+- in-app browser 自动化无法读取 `file://` 原型页；本次以源码和已打开原型为准，没有绕过浏览器安全策略。
+- 前端依赖未安装导致初始 Vitest 不可用，已执行 `npm install` 安装依赖；`package-lock.json` 无实际内容差异，已恢复不产生噪音。
+- Gradle 仍提示 Gradle 10 兼容性弃用警告，当前不影响测试通过。
+
+### ✅ 验证结果
+- ✅ 前端全量测试：`npm run test`，12 个测试文件 / 35 个测试通过。
+- ✅ 前端生产构建：`npm run build` 通过。
+- ✅ 后端全量测试：`gradle test` 通过。
+
+### 📝 下次待办
+- [ ] 启动前后端做本地真实 API 冒烟：登录、新建分类、拖拽/跳选多个时间块、保存备注、覆盖混合选择、擦除已登记块、删除分类。
+- [ ] 视实际体验微调 v2 工作台样式和移动端布局。
+- [ ] 若 Time Grid 主流程确认稳定，再回到分类耗时统计功能。
+
+### 📂 涉及文件
+- `interval-client/src/views/TimeGridView.vue`
+- `interval-client/src/components/TimeGrid.vue`
+- `interval-client/src/components/TimeSlotCell.vue`
+- `interval-client/src/components/SelectionEditorPanel.vue`
+- `interval-client/src/components/CategoryManagerPanel.vue`
+- `interval-client/src/composables/useSlotSelection.ts`
+- `interval-client/src/composables/useSelectionEditorState.ts`
+- `interval-client/src/services/timeSlotService.ts`
+- `interval-client/src/stores/useTimeSlotStore.ts`
+- `interval-client/src/types/timeSlot.ts`
+- `interval-server/src/main/java/com/interval/timeslot/**`
+- `interval-server/src/test/java/com/interval/timeslot/**`
+
+---
+
 ## [2026-05-20] 原型目录清理与统计文档优化完成
 
 ### 📋 本次目标

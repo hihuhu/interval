@@ -42,6 +42,9 @@ public class TimeSlot {
     
     @Column(name = "activity_name", nullable = false)
     private String activityName;
+
+    @Column(name = "note", length = 500)
+    private String note;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)

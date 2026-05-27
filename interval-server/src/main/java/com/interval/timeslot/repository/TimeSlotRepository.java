@@ -1,5 +1,6 @@
 package com.interval.timeslot.repository;
 
+import com.interval.stats.dto.CategoryDurationStatRawDto;
 import com.interval.timeslot.entity.TimeSlot;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,6 +27,9 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
     @EntityGraph(attributePaths = {"category"})
     Optional<TimeSlot> findByIdAndUserId(Long id, Long userId);
 
+    @EntityGraph(attributePaths = {"category"})
+    List<TimeSlot> findByUserIdAndIdIn(Long userId, List<Long> ids);
+
     /**
      * 统计某个分类被使用的次数
      */
@@ -37,5 +41,26 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
      */
     @Query("SELECT CASE WHEN COUNT(ts) > 0 THEN true ELSE false END FROM TimeSlot ts WHERE ts.category.id = :categoryId")
     boolean existsByCategoryId(@Param("categoryId") Long categoryId);
-}
 
+    @Query("""
+        SELECT new com.interval.stats.dto.CategoryDurationStatRawDto(
+            c.id,
+            c.name,
+            c.colorCode,
+            c.status,
+            c.displayOrder,
+            COUNT(ts.id)
+        )
+        FROM TimeSlot ts
+        JOIN ts.category c
+        WHERE ts.userId = :userId
+          AND ts.date BETWEEN :startDate AND :endDate
+        GROUP BY c.id, c.name, c.colorCode, c.status, c.displayOrder
+        ORDER BY COUNT(ts.id) DESC, c.displayOrder ASC, c.name ASC
+    """)
+    List<CategoryDurationStatRawDto> findCategoryDurationStats(
+        @Param("userId") Long userId,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate
+    );
+}

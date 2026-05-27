@@ -22,13 +22,23 @@ public record UpsertTimeSlotRequest(
     @Size(max = 100, message = "activityName must be at most 100 characters")
     String activityName,
 
+    @Size(max = 500, message = "note must be at most 500 characters")
+    String note,
+
     @NotNull(message = "categoryId is required")
     @Positive(message = "categoryId must be positive")
     Long categoryId
 ) {
+    public UpsertTimeSlotRequest(LocalDate date, Integer slotIndex, String activityName, Long categoryId) {
+        this(date, slotIndex, activityName, null, categoryId);
+    }
+
     public UpsertTimeSlotRequest {
         if (activityName != null) {
             activityName = activityName.trim();
+        }
+        if (note != null) {
+            note = note.trim();
         }
     }
 }

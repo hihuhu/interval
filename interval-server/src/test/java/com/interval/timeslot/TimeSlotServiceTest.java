@@ -4,6 +4,11 @@ import com.interval.category.entity.Category;
 import com.interval.category.entity.CategoryStatus;
 import com.interval.category.repository.CategoryRepository;
 import com.interval.timeslot.dto.DeleteTimeSlotResponseDto;
+import com.interval.timeslot.dto.BatchDeleteTimeSlotRequest;
+import com.interval.timeslot.dto.BatchDeleteTimeSlotResponseDto;
+import com.interval.timeslot.dto.BatchUpsertTimeSlotRequest;
+import com.interval.timeslot.dto.BatchUpsertTimeSlotResponseDto;
+import com.interval.timeslot.dto.BatchUpsertTimeSlotRequest.BatchSlotRequest;
 import com.interval.timeslot.dto.TimeSlotDto;
 import com.interval.timeslot.dto.UpsertTimeSlotRequest;
 import com.interval.timeslot.entity.TimeSlot;
@@ -64,6 +69,7 @@ class TimeSlotServiceTest {
         assertEquals(1, result.size());
         assertEquals(36, result.get(0).slotIndex());
         assertEquals("写代码", result.get(0).activityName());
+        assertEquals("记录设计讨论", result.get(0).note());
         assertEquals("工作", result.get(0).categoryName());
         assertEquals("工作", result.get(0).categoryDisplayName());
         verify(timeSlotRepository).findByUserIdAndDateOrderBySlotIndexAsc(userId, date);
@@ -85,6 +91,51 @@ class TimeSlotServiceTest {
         assertEquals(36, result.slotIndex());
         assertEquals("写代码", result.activityName());
         verify(timeSlotRepository).save(any(TimeSlot.class));
+    }
+
+    @Test
+    @DisplayName("批量保存时间格时应保留未触碰备注并覆盖主动编辑的备注")
+    void should_batch_upsert_slots_and_respect_note_touched_flag() {
+        TimeSlot existingSlot = createSlot(1L, userId, date, 36, "写代码", workCategory);
+        existingSlot.setNote("原备注");
+        TimeSlot savedExisting = createSlot(1L, userId, date, 36, "计划", workCategory);
+        savedExisting.setNote("原备注");
+        TimeSlot savedNew = createSlot(2L, userId, date, 37, "计划", workCategory);
+        savedNew.setNote("新备注");
+        BatchUpsertTimeSlotRequest request = new BatchUpsertTimeSlotRequest(
+            date,
+            List.of(
+                new BatchSlotRequest(36, "计划", workCategory.getId(), null, false),
+                new BatchSlotRequest(37, "计划", workCategory.getId(), "新备注", true)
+            )
+        );
+
+        when(categoryRepository.findByUserIdAndId(userId, workCategory.getId())).thenReturn(Optional.of(workCategory));
+        when(timeSlotRepository.findByUserIdAndDateAndSlotIndex(userId, date, 36)).thenReturn(Optional.of(existingSlot));
+        when(timeSlotRepository.findByUserIdAndDateAndSlotIndex(userId, date, 37)).thenReturn(Optional.empty());
+        when(timeSlotRepository.saveAll(any())).thenReturn(List.of(savedExisting, savedNew));
+
+        BatchUpsertTimeSlotResponseDto result = timeSlotService.batchUpsertTimeSlots(userId, request);
+
+        assertEquals(2, result.savedCount());
+        assertEquals("原备注", result.slots().get(0).note());
+        assertEquals("新备注", result.slots().get(1).note());
+        verify(timeSlotRepository).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("批量删除只删除当前用户拥有的时间格")
+    void should_batch_delete_only_owned_slots() {
+        TimeSlot first = createSlot(1L, userId, date, 36, "写代码", workCategory);
+        TimeSlot second = createSlot(2L, userId, date, 37, "写代码", workCategory);
+        BatchDeleteTimeSlotRequest request = new BatchDeleteTimeSlotRequest(List.of(1L, 2L, 99L));
+        when(timeSlotRepository.findByUserIdAndIdIn(userId, request.slotIds())).thenReturn(List.of(first, second));
+
+        BatchDeleteTimeSlotResponseDto result = timeSlotService.batchDeleteTimeSlots(userId, request);
+
+        assertEquals(2, result.deletedCount());
+        assertEquals(List.of(1L, 2L), result.slotIds());
+        verify(timeSlotRepository).deleteAll(List.of(first, second));
     }
 
     @Test
@@ -198,6 +249,7 @@ class TimeSlotServiceTest {
         slot.setDate(slotDate);
         slot.setSlotIndex(slotIndex);
         slot.setActivityName(activityName);
+        slot.setNote("记录设计讨论");
         slot.setCategory(category);
         return slot;
     }

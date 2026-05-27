@@ -4,6 +4,21 @@
 
 ---
 
+## Time Grid v2 UI iteration note
+
+The latest formal Vue UI iteration for the time grid is documented here:
+
+- `../design/time-grid-v2-ui-iteration-2026-05-27.md`
+
+Key decisions:
+
+- Empty time cells should stay visually blank.
+- Occupied cells should show only compact category labels.
+- Selected cells should use light fill plus clear inset outline, not heavy overlays, corner dots, or bottom underlines.
+- The right-side category picker should use the prototype-style visible category list, not a native dropdown.
+
+---
+
 ## 当前推荐查看顺序
 
 1. `modern-time-grid-v2.html` — 当前时间格主原型。
@@ -119,11 +134,19 @@
 
 当前主参考原型：`modern-time-grid-v2.html`
 
+正式实现状态（2026-05-27）：
+
+- `TimeGridView` 已按 v2 原型重构为工作台布局：顶部 Hero、指标卡、日期切换、左侧时间网格、右侧选择编辑和分类管理。
+- 正式时间网格已采用原型的小时行结构：24 行，每行 4 个 15 分钟块。
+- 已实现拖拽连续选择、单击跳选、再次单击取消、拖选后继续点选追加。
+- 已实现右侧选择面板、备注回显、混合分类/混合备注提示、批量保存和已登记块擦除。
+- 后端已新增批量保存和批量删除 TimeSlot API。
+
 下一步建议：
 
-- 将右侧选择面板与擦除交互纳入正式 Vue 设计文档。
-- 如需正式实现擦除能力，先补充前端测试。
-- 评估是否继续复用逐条删除 API，或新增后端批量删除 API。
+- 继续细化右侧选择编辑面板的视觉密度、按钮状态和表单反馈。
+- 用真实浏览器补做保存/覆盖/擦除的端到端冒烟。
+- 主流程稳定后，再回到分类耗时统计功能。
 
 ### 2. 分类耗时统计
 
@@ -160,6 +183,9 @@
 
 - **多选交互修复**
   - 修复“先选多个块，再混合点选不同已登记块时，右侧分类/备注显示错误”的问题。
+  - 正式 Vue 页面已修复真实浏览器 `pointerdown -> pointerup -> click` 事件序列导致的拖选后点选丢失问题。
+  - 拖选开始时不再立即清空旧选择；只有确认拖出连续范围后才替换选择集。
+  - 网格层通过坐标识别当前时间块，降低真实拖拽时 `pointerenter` 不稳定带来的漏选风险。
   - 右侧面板现在明确区分三种状态：
     1. **统一分类 / 统一备注**：自动回显。
     2. **混合分类**：不再错误保留旧分类，提示用户重新指定统一分类。

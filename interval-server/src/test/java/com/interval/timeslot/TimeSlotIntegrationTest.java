@@ -6,6 +6,11 @@ import com.interval.category.entity.CategoryStatus;
 import com.interval.category.repository.CategoryRepository;
 import com.interval.category.service.CategoryService;
 import com.interval.timeslot.dto.DeleteTimeSlotResponseDto;
+import com.interval.timeslot.dto.BatchDeleteTimeSlotRequest;
+import com.interval.timeslot.dto.BatchDeleteTimeSlotResponseDto;
+import com.interval.timeslot.dto.BatchUpsertTimeSlotRequest;
+import com.interval.timeslot.dto.BatchUpsertTimeSlotRequest.BatchSlotRequest;
+import com.interval.timeslot.dto.BatchUpsertTimeSlotResponseDto;
 import com.interval.timeslot.dto.TimeSlotDto;
 import com.interval.timeslot.dto.UpsertTimeSlotRequest;
 import com.interval.timeslot.repository.TimeSlotRepository;
@@ -66,6 +71,56 @@ class TimeSlotIntegrationTest {
         assertThat(slots.get(0).slotIndex()).isEqualTo(36);
         assertThat(slots.get(0).activityName()).isEqualTo("写代码");
         assertThat(slots.get(0).categoryName()).isEqualTo("工作");
+    }
+
+    @Test
+    @DisplayName("单格保存和查询应包含备注")
+    void should_save_and_query_slot_note() {
+        TimeSlotDto saved = timeSlotService.upsertTimeSlot(
+            userId,
+            new UpsertTimeSlotRequest(date, 36, "写代码", "记录设计讨论", workCategory.id())
+        );
+
+        List<TimeSlotDto> slots = timeSlotService.getDailySlots(userId, date);
+
+        assertThat(saved.note()).isEqualTo("记录设计讨论");
+        assertThat(slots.get(0).note()).isEqualTo("记录设计讨论");
+    }
+
+    @Test
+    @DisplayName("批量保存应在一次调用中创建多个时间格")
+    void should_batch_upsert_slots() {
+        BatchUpsertTimeSlotResponseDto result = timeSlotService.batchUpsertTimeSlots(
+            userId,
+            new BatchUpsertTimeSlotRequest(
+                date,
+                List.of(
+                    new BatchSlotRequest(36, "写代码", workCategory.id(), "上午", true),
+                    new BatchSlotRequest(37, "写代码", workCategory.id(), "上午", true)
+                )
+            )
+        );
+
+        List<TimeSlotDto> slots = timeSlotService.getDailySlots(userId, date);
+
+        assertThat(result.savedCount()).isEqualTo(2);
+        assertThat(slots).extracting(TimeSlotDto::slotIndex).containsExactly(36, 37);
+        assertThat(slots).extracting(TimeSlotDto::note).containsExactly("上午", "上午");
+    }
+
+    @Test
+    @DisplayName("批量删除应只删除指定的当前用户时间格")
+    void should_batch_delete_slots() {
+        TimeSlotDto first = timeSlotService.upsertTimeSlot(userId, new UpsertTimeSlotRequest(date, 36, "写代码", workCategory.id()));
+        TimeSlotDto second = timeSlotService.upsertTimeSlot(userId, new UpsertTimeSlotRequest(date, 37, "写代码", workCategory.id()));
+
+        BatchDeleteTimeSlotResponseDto result = timeSlotService.batchDeleteTimeSlots(
+            userId,
+            new BatchDeleteTimeSlotRequest(List.of(first.id(), second.id()))
+        );
+
+        assertThat(result.deletedCount()).isEqualTo(2);
+        assertThat(timeSlotService.getDailySlots(userId, date)).isEmpty();
     }
 
     @Test

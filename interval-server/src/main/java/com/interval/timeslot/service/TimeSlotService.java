@@ -1,6 +1,10 @@
 package com.interval.timeslot.service;
 
 import com.interval.timeslot.dto.DeleteTimeSlotResponseDto;
+import com.interval.timeslot.dto.BatchDeleteTimeSlotRequest;
+import com.interval.timeslot.dto.BatchDeleteTimeSlotResponseDto;
+import com.interval.timeslot.dto.BatchUpsertTimeSlotRequest;
+import com.interval.timeslot.dto.BatchUpsertTimeSlotResponseDto;
 import com.interval.timeslot.dto.TimeSlotDto;
 import com.interval.timeslot.dto.UpsertTimeSlotRequest;
 
@@ -13,5 +17,9 @@ public interface TimeSlotService {
 
     TimeSlotDto upsertTimeSlot(Long userId, UpsertTimeSlotRequest request);
 
+    BatchUpsertTimeSlotResponseDto batchUpsertTimeSlots(Long userId, BatchUpsertTimeSlotRequest request);
+
     DeleteTimeSlotResponseDto deleteTimeSlot(Long userId, Long slotId);
+
+    BatchDeleteTimeSlotResponseDto batchDeleteTimeSlots(Long userId, BatchDeleteTimeSlotRequest request);
 }

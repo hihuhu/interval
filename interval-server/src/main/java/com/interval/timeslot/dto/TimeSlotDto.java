@@ -7,6 +7,7 @@ public record TimeSlotDto(
     LocalDate date,
     Integer slotIndex,
     String activityName,
+    String note,
     Long categoryId,
     String categoryName,
     String categoryColor,

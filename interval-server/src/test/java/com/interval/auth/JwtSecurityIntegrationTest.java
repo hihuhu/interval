@@ -1,6 +1,7 @@
 package com.interval.auth;
 
 import com.interval.auth.entity.User;
+import com.interval.auth.config.SeedDataInitializer;
 import com.interval.auth.repository.UserRepository;
 import com.interval.auth.util.JwtUtil;
 import com.interval.category.repository.CategoryRepository;
@@ -40,6 +41,9 @@ class JwtSecurityIntegrationTest {
 
     @Autowired
     private TimeSlotRepository timeSlotRepository;
+
+    @Autowired
+    private SeedDataInitializer seedDataInitializer;
 
     private User user;
 
@@ -106,5 +110,19 @@ class JwtSecurityIntegrationTest {
                 .content("{\"username\":\"newjwtuser\",\"password\":\"SecurePass123!\"}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.result").value("SUCCESS"));
+    }
+
+    @Test
+    @DisplayName("启动后应提供 admin 种子账号")
+    void should_login_with_admin_seed_account() throws Exception {
+        seedDataInitializer.seedAdminAccount();
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"admin\",\"password\":\"123ABCdef*\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.result").value("SUCCESS"))
+            .andExpect(jsonPath("$.data.username").value("admin"))
+            .andExpect(jsonPath("$.data.token").isNotEmpty());
     }
 }

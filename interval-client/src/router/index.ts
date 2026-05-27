@@ -6,6 +6,7 @@ export const routes: RouteRecordRaw[] = [
   { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { publicOnly: true } },
   { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { publicOnly: true } },
   { path: '/time-grid', name: 'timeGrid', component: () => import('@/views/TimeGridView.vue'), meta: { requiresAuth: true } },
+  { path: '/stats', name: 'stats', component: () => import('@/views/StatsView.vue'), meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'notFound', component: () => import('@/views/NotFoundView.vue') },
 ];
 
