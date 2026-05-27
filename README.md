@@ -41,6 +41,7 @@ Interval 是一个前后端分离的时间块记录工具，基于“柳比歇�
 - Spring Boot 3
 - Spring Web, Spring Data JPA, Spring Security, Spring Validation
 - H2 Database for local development and tests
+- Optional MySQL profile for persistent local or server data
 - JWT (`jjwt`)
 - Lombok
 - Gradle
@@ -94,6 +95,31 @@ H2 JDBC URL:
 ```text
 jdbc:h2:mem:testdb
 ```
+
+The default profile uses in-memory H2, so no database setup is required.
+To switch to MySQL later, create a database and run the backend with the `mysql` profile:
+
+```bash
+cd interval-server
+set SPRING_PROFILES_ACTIVE=mysql
+set MYSQL_JDBC_URL=jdbc:mysql://localhost:3306/interval?useUnicode=true^&characterEncoding=utf8^&useSSL=false^&allowPublicKeyRetrieval=true^&serverTimezone=Asia/Shanghai
+set MYSQL_USERNAME=interval
+set MYSQL_PASSWORD=interval
+gradle bootRun
+```
+
+PowerShell example:
+
+```powershell
+cd interval-server
+$env:SPRING_PROFILES_ACTIVE = "mysql"
+$env:MYSQL_JDBC_URL = "jdbc:mysql://localhost:3306/interval?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"
+$env:MYSQL_USERNAME = "interval"
+$env:MYSQL_PASSWORD = "interval"
+gradle bootRun
+```
+
+See `interval-server/.env.mysql.example` for all optional MySQL variables.
 
 If the Gradle wrapper cannot download its distribution on Windows, use an installed system Gradle as a fallback:
 

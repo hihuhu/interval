@@ -36,6 +36,8 @@
 - 后端：`http://localhost:8088`
 - 前端：`http://localhost:5173`
 - H2 Console：`http://localhost:8088/h2-console`
+- 默认数据库：内存 H2，无需安装数据库。
+- 可选数据库：MySQL profile，后续安装 MySQL 后启用 `SPRING_PROFILES_ACTIVE=mysql` 即可切换。
 
 ---
 
@@ -48,6 +50,18 @@ cd interval-server
 gradle test
 gradle bootRun
 ```
+
+默认启动使用 H2。切换 MySQL 时先创建数据库，再设置环境变量：
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "mysql"
+$env:MYSQL_JDBC_URL = "jdbc:mysql://localhost:3306/interval?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"
+$env:MYSQL_USERNAME = "interval"
+$env:MYSQL_PASSWORD = "interval"
+gradle bootRun
+```
+
+变量模板见 `interval-server/.env.mysql.example`。
 
 如果 Gradle Wrapper 下载超时，可使用本机系统 Gradle。此前本机可用：
 

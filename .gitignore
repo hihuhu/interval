@@ -52,6 +52,7 @@ logs/
 .env.*
 !.env.example
 !.env.sample
+!interval-server/.env.mysql.example
 
 # =========================
 # Java / Gradle (interval-server)
