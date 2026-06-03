@@ -35,7 +35,6 @@
         </button>
       </form>
 
-      <p class="seed-hint">开发账号：admin / 123ABCdef*</p>
       <RouterLink class="register-link" to="/register">还没有账号？注册</RouterLink>
     </section>
   </main>
@@ -50,8 +49,8 @@ import { useAuthStore } from '@/stores/useAuthStore';
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
-const username = ref('admin');
-const password = ref('123ABCdef*');
+const username = ref('');
+const password = ref('');
 
 async function submit() {
   await auth.login(username.value, password.value);
@@ -141,7 +140,6 @@ input {
   font-size: 12px;
 }
 
-.seed-hint,
 .register-link {
   margin: 0;
   text-align: center;

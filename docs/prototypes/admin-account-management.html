@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interval - 管理员账号管理原型</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#f8fafc;
+  --surface:rgba(255,255,255,.82);
+  --surface-soft:rgba(255,255,255,.72);
+  --line:rgba(226,232,240,.9);
+  --line-strong:#e2e8f0;
+  --text:#0f172a;
+  --muted:#64748b;
+  --subtle:#94a3b8;
+  --primary:#6366f1;
+  --primary-dark:#4338ca;
+  --primary-soft:#eef2ff;
+  --blue:#2563eb;
+  --blue-soft:#dbeafe;
+  --amber:#b45309;
+  --amber-soft:#fef3c7;
+  --red:#b91c1c;
+  --red-soft:#fee2e2;
+  --green:#15803d;
+  --green-soft:#dcfce7;
+  --shadow:0 20px 60px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.06);
+}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(99,102,241,.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(14,165,233,.10), transparent 24%),
+    linear-gradient(180deg,#f8fbff 0%,#f8fafc 48%,#f1f5f9 100%);
+}
+[v-cloak]{display:none}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.prototype-bar{
+  position:sticky;
+  top:0;
+  z-index:40;
+  border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.9);
+  backdrop-filter:blur(14px);
+}
+.prototype-inner{
+  max-width:1240px;
+  margin:auto;
+  min-height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:0 24px;
+}
+.prototype-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:800;
+  color:#1f2937;
+}
+.logo{
+  width:28px;
+  height:28px;
+  position:relative;
+  flex:0 0 auto;
+}
+.logo::before,
+.logo::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  width:0;
+  height:0;
+  border-left:9px solid transparent;
+  border-right:9px solid transparent;
+}
+.logo::before{top:2px;border-bottom:13px solid #6366f1}
+.logo::after{bottom:2px;border-top:13px solid #a5b4fc}
+.mode-tabs{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  padding:4px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#f8fafc;
+}
+.mode-tabs button{
+  min-height:36px;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:var(--muted);
+  padding:0 12px;
+  font-size:12px;
+  font-weight:700;
+}
+.mode-tabs button.active{
+  background:#fff;
+  color:var(--primary-dark);
+  box-shadow:0 8px 20px rgba(15,23,42,.08);
+}
+.auth-shell{
+  min-height:calc(100vh - 57px);
+  display:grid;
+  place-items:center;
+  padding:24px;
+}
+.auth-panel{
+  width:100%;
+  display:grid;
+  place-items:center;
+}
+.auth-card{
+  width:min(392px,100%);
+  border:1px solid rgba(255,255,255,.75);
+  border-radius:24px;
+  background:var(--surface);
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(22px);
+  padding:32px;
+  display:grid;
+  gap:26px;
+}
+.auth-aside{
+  display:none;
+}
+.aside-card{
+  border:1px solid rgba(15,118,110,.18);
+  border-radius:8px;
+  background:rgba(255,255,255,.7);
+  padding:22px;
+}
+.brand-line{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  color:var(--primary-dark);
+  font-size:20px;
+  font-weight:800;
+}
+.eyebrow{
+  margin:0 0 8px;
+  color:var(--primary);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+h1,h2,h3,p{margin:0}
+h1{
+  font-size:22px;
+  line-height:1.18;
+  letter-spacing:0;
+}
+.subtitle{
+  margin-top:10px;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.7;
+}
+form{
+  display:grid;
+  gap:18px;
+}
+label{
+  display:grid;
+  gap:8px;
+  color:#334155;
+  font-size:12px;
+  font-weight:800;
+}
+.field-row{
+  position:relative;
+}
+input,select{
+  width:100%;
+  min-height:40px;
+  border:0;
+  border-bottom:1.5px solid var(--line-strong);
+  border-radius:0;
+  background:transparent;
+  color:#1e293b;
+  padding:8px 0;
+  outline:none;
+}
+input:focus,select:focus{
+  border-bottom-color:var(--primary);
+  box-shadow:0 1px 0 0 var(--primary);
+}
+.password-toggle{
+  position:absolute;
+  right:6px;
+  top:50%;
+  transform:translateY(-50%);
+  width:36px;
+  height:36px;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:var(--muted);
+}
+.helper{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+}
+.alert{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  border-radius:8px;
+  padding:12px;
+  font-size:12px;
+  line-height:1.6;
+}
+.alert.info{background:var(--blue-soft);color:#1e40af}
+.alert.warn{background:var(--amber-soft);color:#92400e}
+.alert.danger{background:var(--red-soft);color:#991b1b}
+.alert.success{background:var(--green-soft);color:#166534}
+.actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.btn{
+  min-height:40px;
+  border:1px solid transparent;
+  border-radius:14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:0 14px;
+  font-size:13px;
+  font-weight:800;
+}
+.btn.primary{background:var(--primary);color:white}
+.btn.primary{background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 16px 30px rgba(79,70,229,.25)}
+.btn.primary:hover{background:linear-gradient(135deg,#6366f1,#4338ca)}
+.btn.secondary{border-color:var(--line-strong);background:#fff;color:#334155}
+.btn.secondary:hover{background:#f8fafc}
+.btn.danger{background:#fff;color:var(--red);border-color:#fecaca}
+.btn.danger:hover{background:#fff5f5}
+.btn.full{width:100%;min-height:46px}
+.link-button{
+  border:0;
+  background:transparent;
+  color:var(--primary-dark);
+  padding:0;
+  font-size:13px;
+  font-weight:800;
+}
+.login-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-top:14px;
+}
+.aside-list{
+  margin-top:18px;
+  display:grid;
+  gap:12px;
+}
+.aside-item{
+  display:flex;
+  gap:10px;
+  color:#334155;
+  font-size:13px;
+  line-height:1.55;
+}
+.aside-item i{color:var(--primary);flex:0 0 auto}
+.admin-shell{
+  min-height:calc(100vh - 57px);
+  position:relative;
+}
+.app-header{
+  position:sticky;
+  top:57px;
+  z-index:30;
+  border-bottom:1px solid rgba(255,255,255,.6);
+  background:rgba(255,255,255,.70);
+  backdrop-filter:blur(20px);
+}
+.header-inner{
+  max-width:1280px;
+  min-height:64px;
+  margin:0 auto;
+  padding:0 24px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+}
+.brand-zone,
+.header-actions,
+.brand-mark,
+.top-nav{
+  display:flex;
+  align-items:center;
+}
+.brand-zone{gap:28px}
+.brand-mark{
+  gap:10px;
+  color:#4f46e5;
+  font-size:14px;
+  font-weight:800;
+}
+.brand-mark .logo{width:20px;height:20px}
+.brand-mark .logo::before,
+.brand-mark .logo::after{border-left-width:8px;border-right-width:8px}
+.brand-mark .logo::before{border-bottom-width:11px}
+.brand-mark .logo::after{border-top-width:11px}
+.top-nav{gap:8px}
+.nav-chip{
+  display:inline-flex;
+  align-items:center;
+  min-height:36px;
+  padding:0 13px;
+  border-radius:999px;
+  border:1px solid rgba(226,232,240,.9);
+  background:rgba(255,255,255,.72);
+  color:#64748b;
+  font-size:12px;
+  font-weight:800;
+  text-decoration:none;
+}
+.nav-chip.active{
+  color:#4338ca;
+  background:rgba(238,242,255,.86);
+  border-color:rgba(129,140,248,.35);
+}
+.user-menu{
+  position:relative;
+}
+.user-trigger{
+  min-height:36px;
+  border:1px solid rgba(203,213,225,.8);
+  border-radius:12px;
+  background:rgba(255,255,255,.75);
+  color:#475569;
+  padding:0 10px 0 12px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  font-weight:800;
+}
+.dropdown{
+  position:absolute;
+  right:0;
+  top:44px;
+  width:180px;
+  border:1px solid rgba(226,232,240,.9);
+  border-radius:14px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 20px 50px rgba(15,23,42,.14);
+  padding:8px;
+}
+.dropdown button{
+  width:100%;
+  min-height:38px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#475569;
+  padding:0 10px;
+  font-size:12px;
+  font-weight:800;
+}
+.dropdown button:hover{background:#f8fafc;color:#4338ca}
+.dropdown-note{
+  padding:8px 10px 10px;
+  color:#94a3b8;
+  font-size:11px;
+  line-height:1.5;
+}
+.admin-main{
+  min-width:0;
+  max-width:1280px;
+  margin:0 auto;
+  padding:32px 24px 48px;
+}
+.topline{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:18px;
+}
+.page-title h1{
+  font-size:24px;
+}
+.page-title p{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+.admin-user{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+}
+.avatar{
+  width:34px;
+  height:34px;
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  background:#e0f2fe;
+  color:#075985;
+  font-weight:800;
+}
+.metrics{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:16px;
+}
+.metric{
+  border:1px solid rgba(226,232,240,.8);
+  border-radius:20px;
+  background:rgba(255,255,255,.76);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+  padding:16px;
+}
+.metric-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:800;
+}
+.metric-value{
+  margin-top:12px;
+  font-size:27px;
+  font-weight:800;
+}
+.metric-note{
+  margin-top:6px;
+  color:var(--subtle);
+  font-size:12px;
+}
+.workbench{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 340px;
+  gap:16px;
+}
+.panel{
+  border:1px solid rgba(255,255,255,.75);
+  border-radius:24px;
+  background:rgba(255,255,255,.82);
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(22px);
+  min-width:0;
+  overflow:hidden;
+}
+.panel-head{
+  min-height:64px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+}
+.panel-title h2{
+  font-size:16px;
+}
+.panel-title p{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:12px;
+}
+.tools{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.search{
+  width:220px;
+}
+.table-wrap{overflow:auto}
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:820px;
+}
+th,td{
+  padding:13px 16px;
+  border-bottom:1px solid var(--line);
+  text-align:left;
+  font-size:13px;
+}
+th{
+  color:var(--muted);
+  background:#f8fafc;
+  font-size:11px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+tr.selected{background:#eef2ff}
+tr:hover{background:#f8fafc}
+.user-cell{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.mini-avatar{
+  width:30px;
+  height:30px;
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  background:#f1f5f9;
+  color:#475569;
+  font-size:12px;
+  font-weight:800;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:24px;
+  border-radius:999px;
+  padding:0 9px;
+  font-size:12px;
+  font-weight:800;
+}
+.badge.active{background:var(--green-soft);color:var(--green)}
+.badge.disabled{background:var(--red-soft);color:var(--red)}
+.badge.admin{background:var(--blue-soft);color:#1d4ed8}
+.badge.must{background:var(--amber-soft);color:var(--amber)}
+.row-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.icon-btn{
+  width:36px;
+  height:36px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  color:var(--muted);
+  display:grid;
+  place-items:center;
+}
+.icon-btn:hover{color:var(--primary-dark);border-color:rgba(129,140,248,.45);background:#eef2ff}
+.table-action{
+  min-height:34px;
+  border:1px solid rgba(203,213,225,.86);
+  border-radius:12px;
+  background:rgba(255,255,255,.78);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:0 10px;
+  color:#475569;
+  font-size:12px;
+  font-weight:800;
+}
+.table-action:hover{
+  border-color:rgba(129,140,248,.45);
+  background:#eef2ff;
+  color:#4338ca;
+}
+.table-action.disable{
+  border-color:#fecaca;
+  background:#fff7f7;
+  color:#b91c1c;
+}
+.table-action.enable{
+  border-color:#bbf7d0;
+  background:#f0fdf4;
+  color:#15803d;
+}
+.status-action{
+  border-color:#fecaca;
+  color:#b91c1c;
+}
+.status-action.enable{
+  border-color:#bbf7d0;
+  color:#15803d;
+  background:#f0fdf4;
+}
+.segmented-field{
+  display:grid;
+  gap:9px;
+}
+.segmented-label{
+  color:#334155;
+  font-size:12px;
+  font-weight:800;
+}
+.segmented-control{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+  padding:6px;
+  border:1px solid rgba(226,232,240,.9);
+  border-radius:16px;
+  background:#f8fafc;
+}
+.segment-option{
+  min-height:54px;
+  border:1px solid transparent;
+  border-radius:12px;
+  background:transparent;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:9px;
+  padding:8px 10px;
+  color:#64748b;
+  text-align:left;
+}
+.segment-option strong{
+  display:block;
+  color:#334155;
+  font-size:13px;
+}
+.segment-option span{
+  display:block;
+  margin-top:2px;
+  color:#94a3b8;
+  font-size:11px;
+  line-height:1.35;
+}
+.segment-option.active{
+  border-color:rgba(129,140,248,.38);
+  background:#fff;
+  color:#4338ca;
+  box-shadow:0 8px 20px rgba(15,23,42,.08);
+}
+.segment-option.active strong{color:#4338ca}
+.detail{
+  padding:16px;
+  display:grid;
+  gap:14px;
+}
+.detail-header{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  border:1px solid transparent;
+  border-radius:16px;
+  padding:10px;
+  margin:-2px -2px 0;
+}
+.detail-header.disabled{
+  border-color:#fecaca;
+  background:#fff7f7;
+}
+.detail-avatar{
+  width:42px;
+  height:42px;
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  background:#f1f5f9;
+  color:#334155;
+  font-weight:800;
+}
+.detail-header.disabled .detail-avatar{
+  background:#fee2e2;
+  color:#991b1b;
+}
+.detail-name h3{
+  font-size:16px;
+}
+.detail-name p{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:12px;
+}
+.detail-header.disabled .detail-name p{
+  color:#b91c1c;
+  font-weight:800;
+}
+.status-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:26px;
+  border-radius:999px;
+  padding:0 10px;
+  font-size:12px;
+  font-weight:800;
+}
+.status-pill.active{
+  background:#dcfce7;
+  color:#15803d;
+}
+.status-pill.disabled{
+  background:#fee2e2;
+  color:#b91c1c;
+}
+.kv{
+  display:grid;
+  gap:8px;
+}
+.kv-row{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  padding:10px 0;
+  border-bottom:1px solid var(--line);
+  font-size:13px;
+}
+.kv-row span:first-child{color:var(--muted)}
+.kv-row span:last-child{font-weight:700;text-align:right}
+.action-stack{
+  display:grid;
+  gap:10px;
+}
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  background:rgba(15,23,42,.36);
+  display:grid;
+  place-items:center;
+  padding:24px;
+}
+.modal{
+  width:min(460px,100%);
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 24px 70px rgba(15,23,42,.24);
+}
+.modal-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:18px;
+  border-bottom:1px solid var(--line);
+}
+.modal-head h2{font-size:18px}
+.modal-body{
+  padding:18px;
+  display:grid;
+  gap:16px;
+}
+.modal-foot{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  padding:14px 18px 18px;
+}
+.temp-password{
+  border:1px dashed #a5b4fc;
+  border-radius:8px;
+  background:#eef2ff;
+  padding:14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.temp-password strong{
+  font-size:18px;
+  letter-spacing:.04em;
+}
+.activity-bars{
+  display:grid;
+  gap:10px;
+  margin-top:10px;
+}
+.bar-row{
+  display:grid;
+  grid-template-columns:72px minmax(0,1fr) 42px;
+  align-items:center;
+  gap:10px;
+  color:var(--muted);
+  font-size:12px;
+}
+.bar{
+  height:8px;
+  border-radius:999px;
+  background:#e2e8f0;
+  overflow:hidden;
+}
+.bar span{
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background:var(--primary);
+}
+.user-home{
+  min-height:calc(100vh - 57px);
+}
+.user-preview{
+  max-width:1280px;
+  margin:0 auto;
+  padding:32px 24px 48px;
+}
+.hero-panel{
+  position:relative;
+  overflow:hidden;
+  padding:28px;
+  border-radius:24px;
+  background:
+    radial-gradient(circle at top right, rgba(165,180,252,.24), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.92), rgba(238,242,255,.88));
+}
+.hero-eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(129,140,248,.18);
+  background:rgba(255,255,255,.7);
+  color:#4338ca;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.hero-eyebrow span{
+  width:7px;
+  height:7px;
+  border-radius:999px;
+  background:linear-gradient(135deg,#818cf8,#4f46e5);
+  box-shadow:0 0 0 4px rgba(99,102,241,.12);
+}
+.hero-panel h1{
+  margin-top:18px;
+  font-size:38px;
+  line-height:1.08;
+}
+.hero-panel p{
+  margin-top:12px;
+  max-width:680px;
+  color:#64748b;
+  font-size:14px;
+  line-height:1.8;
+}
+.placeholder-grid{
+  margin-top:20px;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+.placeholder-card{
+  min-height:96px;
+  border:1px solid rgba(226,232,240,.8);
+  border-radius:20px;
+  background:rgba(255,255,255,.72);
+  padding:16px;
+}
+.placeholder-card span{color:#64748b;font-size:12px;font-weight:800}
+.placeholder-card strong{display:block;margin-top:10px;font-size:24px}
+@media (max-width:1080px){
+  .auth-aside{display:none}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .workbench{grid-template-columns:1fr}
+  .placeholder-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  .prototype-inner{align-items:flex-start;flex-direction:column;padding:12px 16px}
+  .mode-tabs{width:100%;overflow:auto}
+  .auth-panel,.admin-main{padding:18px 14px}
+  .auth-card{padding:22px}
+  .topline{flex-direction:column}
+  .metrics{grid-template-columns:1fr}
+  .placeholder-grid{grid-template-columns:1fr}
+  .panel-head{align-items:flex-start;flex-direction:column}
+  .tools{width:100%;flex-wrap:wrap}
+  .search{width:100%}
+  .header-inner{align-items:flex-start;flex-direction:column;padding:14px 16px}
+  .brand-zone{align-items:flex-start;flex-direction:column;gap:12px}
+  .admin-main,.user-preview{padding:20px 14px 36px}
+}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+  <header class="prototype-bar">
+    <div class="prototype-inner">
+      <div class="prototype-title">
+        <div class="logo">I</div>
+        <span>Interval 管理员与忘记密码原型</span>
+      </div>
+      <div class="mode-tabs" aria-label="原型状态切换">
+        <button :class="{active: view === 'login'}" @click="setView('login')">登录</button>
+        <button :class="{active: view === 'forgot'}" @click="setView('forgot')">忘记密码</button>
+        <button :class="{active: view === 'changePassword'}" @click="setView('changePassword')">管理员首次改密</button>
+        <button :class="{active: view === 'userHome'}" @click="setView('userHome')">普通用户视图</button>
+        <button :class="{active: view === 'admin'}" @click="setView('admin')">管理后台</button>
+      </div>
+    </div>
+  </header>
+
+  <main v-if="['login','forgot','changePassword'].includes(view)" class="auth-shell">
+    <section class="auth-panel">
+      <article class="auth-card" v-if="view === 'login'" aria-labelledby="login-title">
+        <div class="brand-line">
+          <div class="logo">I</div>
+          <span>Interval</span>
+        </div>
+        <p class="eyebrow">Sign in</p>
+        <h1 id="login-title">登录你的账号</h1>
+        <p class="subtitle">普通用户进入时间格；管理员账号只进入账号管理后台。</p>
+        <form @submit.prevent="handleLogin">
+          <label>
+            用户名
+            <input v-model="login.username" autocomplete="username" placeholder="admin 或你的用户名">
+          </label>
+          <label>
+            密码
+            <div class="field-row">
+              <input v-model="login.password" :type="showPassword ? 'text' : 'password'" autocomplete="current-password" placeholder="默认管理员密码 123456">
+              <button class="password-toggle" type="button" @click="showPassword = !showPassword" aria-label="显示或隐藏密码">
+                <i :data-lucide="showPassword ? 'eye-off' : 'eye'" width="17" height="17"></i>
+              </button>
+            </div>
+          </label>
+          <div class="alert warn" v-if="login.username === 'admin'">
+            <i data-lucide="triangle-alert" width="17" height="17"></i>
+            <span>如果系统没有管理员，会默认创建 admin / 123456。首次登录后必须修改密码。</span>
+          </div>
+          <button class="btn primary full" type="submit">
+            <i data-lucide="log-in" width="17" height="17"></i>
+            登录
+          </button>
+        </form>
+        <div class="login-row">
+          <button class="link-button" type="button" @click="setView('forgot')">忘记密码？</button>
+          <button class="link-button" type="button" @click="fillAdmin">使用 admin 演示</button>
+        </div>
+      </article>
+
+      <article class="auth-card" v-if="view === 'forgot'" aria-labelledby="forgot-title">
+        <div class="brand-line">
+          <div class="logo">I</div>
+          <span>Interval</span>
+        </div>
+        <p class="eyebrow">Password help</p>
+        <h1 id="forgot-title">找回密码</h1>
+        <p class="subtitle">当前版本没有邮箱或短信通道，密码找回由管理员完成。</p>
+        <form @submit.prevent="forgotSubmitted = true">
+          <label>
+            用户名
+            <input v-model="forgotUsername" autocomplete="username" placeholder="输入你的用户名">
+          </label>
+          <button class="btn primary full" type="submit">
+            <i data-lucide="send" width="17" height="17"></i>
+            查看处理方式
+          </button>
+        </form>
+        <div class="alert info" style="margin-top:18px" v-if="forgotSubmitted">
+          <i data-lucide="info" width="17" height="17"></i>
+          <span>请联系管理员重置密码。管理员重置后，你会用临时密码登录，并在登录后立即设置新密码。</span>
+        </div>
+        <div class="login-row">
+          <button class="link-button" type="button" @click="setView('login')">返回登录</button>
+        </div>
+      </article>
+
+      <article class="auth-card" v-if="view === 'changePassword'" aria-labelledby="change-title">
+        <div class="brand-line">
+          <div class="logo">I</div>
+          <span>Interval Admin</span>
+        </div>
+        <p class="eyebrow">Required action</p>
+        <h1 id="change-title">首次登录需要修改密码</h1>
+        <p class="subtitle">默认管理员 admin / 123456 只能用于初始化。设置新密码后才能进入管理后台。</p>
+        <form @submit.prevent="setView('admin')">
+          <label>
+            当前密码
+            <input type="password" value="123456" autocomplete="current-password">
+          </label>
+          <label>
+            新密码
+            <input type="password" value="Admin@2026" autocomplete="new-password">
+          </label>
+          <label>
+            确认新密码
+            <input type="password" value="Admin@2026" autocomplete="new-password">
+          </label>
+          <div class="alert warn">
+            <i data-lucide="shield-alert" width="17" height="17"></i>
+            <span>新密码建议至少 8 位，并包含大小写字母、数字或符号。提交后默认密码立即失效。</span>
+          </div>
+          <button class="btn primary full" type="submit">
+            <i data-lucide="key-round" width="17" height="17"></i>
+            保存并进入管理后台
+          </button>
+        </form>
+      </article>
+    </section>
+
+    <aside class="auth-aside" aria-label="账号规则说明">
+      <div class="aside-card">
+        <p class="eyebrow">Account policy</p>
+        <h2>账号边界</h2>
+        <p class="subtitle">管理员是后台操作账号，不拥有时间格和统计数据；普通用户只管理自己的时间记录。</p>
+        <div class="aside-list">
+          <div class="aside-item">
+            <i data-lucide="user-cog" width="18" height="18"></i>
+            <span>系统没有管理员时，启动后创建 admin / 123456。</span>
+          </div>
+          <div class="aside-item">
+            <i data-lucide="route" width="18" height="18"></i>
+            <span>管理员登录进入 /admin，普通用户登录进入 /time-grid。</span>
+          </div>
+          <div class="aside-item">
+            <i data-lucide="ban" width="18" height="18"></i>
+            <span>禁用账号后不能登录，已有访问也应被拦截。</span>
+          </div>
+          <div class="aside-item">
+            <i data-lucide="lock-keyhole" width="18" height="18"></i>
+            <span>管理员重置密码后，用户下次登录必须修改密码。</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <main v-if="view === 'userHome'" class="user-home">
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand-zone">
+          <div class="brand-mark">
+            <div class="logo"></div>
+            <span>Interval</span>
+          </div>
+          <nav class="top-nav" aria-label="主导航">
+            <button class="nav-chip active" type="button">时间格</button>
+            <button class="nav-chip" type="button">统计</button>
+          </nav>
+        </div>
+        <div class="user-menu">
+          <button class="user-trigger" type="button" @click="userMenuOpen = !userMenuOpen">
+            <span>chenyu</span>
+            <i data-lucide="chevron-down" width="15" height="15"></i>
+          </button>
+          <div class="dropdown" v-if="userMenuOpen">
+            <p class="dropdown-note">普通用户账号</p>
+            <button type="button" @click="setView('login')">
+              <i data-lucide="log-out" width="15" height="15"></i>
+              退出登录
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <section class="user-preview">
+      <div class="hero-panel surface-card">
+        <div class="hero-eyebrow"><span></span>DAILY TIME GRID</div>
+        <h1>普通用户登录后进入时间格</h1>
+        <p>普通用户保留现有产品路径：时间格、统计、右上角用户名菜单。这里用轻量占位展示登录分流，不重画完整时间格。</p>
+      </div>
+      <div class="placeholder-grid">
+        <article class="placeholder-card"><span>今日已记录</span><strong>6.5h</strong></article>
+        <article class="placeholder-card"><span>完成度</span><strong>27%</strong></article>
+        <article class="placeholder-card"><span>分类数</span><strong>5</strong></article>
+        <article class="placeholder-card"><span>当前选择</span><strong>0</strong></article>
+      </div>
+    </section>
+  </main>
+
+  <main v-if="view === 'admin'" class="admin-shell">
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand-zone">
+          <div class="brand-mark">
+            <div class="logo"></div>
+            <span>Interval</span>
+          </div>
+          <nav class="top-nav" aria-label="管理员导航">
+            <button class="nav-chip active" type="button">管理</button>
+          </nav>
+        </div>
+        <div class="user-menu">
+          <button class="user-trigger" type="button" @click="adminMenuOpen = !adminMenuOpen">
+            <span>admin</span>
+            <i data-lucide="chevron-down" width="15" height="15"></i>
+          </button>
+          <div class="dropdown" v-if="adminMenuOpen">
+            <p class="dropdown-note">管理员账号，仅可访问管理页面。</p>
+            <button type="button" @click="setView('login')">
+              <i data-lucide="log-out" width="15" height="15"></i>
+              退出登录
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="admin-main">
+      <div class="topline">
+        <div class="page-title">
+          <h1>账号管理</h1>
+          <p>查看用户、识别活跃度、重置密码、禁用或启用账号。</p>
+        </div>
+      </div>
+
+      <section class="metrics" aria-label="账号仪表盘">
+        <article class="metric">
+          <div class="metric-top">
+            <span>总用户</span>
+            <i data-lucide="users" width="17" height="17"></i>
+          </div>
+          <div class="metric-value">128</div>
+          <p class="metric-note">不含管理员账号</p>
+        </article>
+        <article class="metric">
+          <div class="metric-top">
+            <span>启用账号</span>
+            <i data-lucide="circle-check" width="17" height="17"></i>
+          </div>
+          <div class="metric-value">121</div>
+          <p class="metric-note">可正常登录</p>
+        </article>
+        <article class="metric">
+          <div class="metric-top">
+            <span>禁用账号</span>
+            <i data-lucide="ban" width="17" height="17"></i>
+          </div>
+          <div class="metric-value">7</div>
+          <p class="metric-note">保留数据，不可登录</p>
+        </article>
+        <article class="metric">
+          <div class="metric-top">
+            <span>今日活跃</span>
+            <i data-lucide="pulse" width="17" height="17"></i>
+          </div>
+          <div class="metric-value">34</div>
+          <p class="metric-note">今天登录或记录时间</p>
+        </article>
+        <article class="metric">
+          <div class="metric-top">
+            <span>近 7 日活跃</span>
+            <i data-lucide="activity" width="17" height="17"></i>
+          </div>
+          <div class="metric-value">86</div>
+          <p class="metric-note">过去 7 天有行为</p>
+        </article>
+      </section>
+
+      <section class="workbench">
+        <article class="panel">
+          <div class="panel-head">
+            <div class="panel-title">
+              <h2>用户列表</h2>
+              <p>管理员账号不展示在普通用户列表中。</p>
+            </div>
+            <div class="tools">
+              <input class="search" v-model="keyword" placeholder="搜索用户名">
+              <select v-model="statusFilter" aria-label="状态筛选">
+                <option value="all">全部状态</option>
+                <option value="ACTIVE">启用</option>
+                <option value="DISABLED">禁用</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>用户</th>
+                  <th>状态</th>
+                  <th>注册时间</th>
+                  <th>最近登录</th>
+                  <th>最近活跃</th>
+                  <th>7 日记录</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="user in filteredUsers" :key="user.username" :class="{selected: selected.username === user.username}" @click="selected = user">
+                  <td>
+                    <div class="user-cell">
+                      <div class="mini-avatar">{{ user.username.slice(0,1).toUpperCase() }}</div>
+                      <strong>{{ user.username }}</strong>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" :class="user.status === 'ACTIVE' ? 'active' : 'disabled'">
+                      {{ user.status === 'ACTIVE' ? '启用' : '禁用' }}
+                    </span>
+                    <span class="badge must" v-if="user.mustChangePassword">需改密</span>
+                  </td>
+                  <td>{{ user.createdAt }}</td>
+                  <td>{{ user.lastLoginAt }}</td>
+                  <td>{{ user.lastActiveAt }}</td>
+                  <td>{{ user.weeklyRecords }}</td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="table-action" type="button" title="重置密码" @click.stop="openReset(user)">
+                        <i data-lucide="key-round" width="16" height="16"></i>
+                        重置
+                      </button>
+                      <button
+                        class="table-action"
+                        :class="user.status === 'ACTIVE' ? 'disable' : 'enable'"
+                        type="button"
+                        :title="user.status === 'ACTIVE' ? '禁用账号' : '启用账号'"
+                        @click.stop="toggleStatus(user)"
+                      >
+                        <i :data-lucide="user.status === 'ACTIVE' ? 'ban' : 'circle-check'" width="16" height="16"></i>
+                        {{ user.status === 'ACTIVE' ? '禁用' : '启用' }}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <aside class="panel">
+          <div class="panel-head">
+            <div class="panel-title">
+              <h2>账号详情</h2>
+              <p>选择用户后执行管理操作。</p>
+            </div>
+          </div>
+          <div class="detail">
+            <div class="detail-header" :class="{ disabled: selected.status !== 'ACTIVE' }">
+              <div class="detail-avatar">{{ selected.username.slice(0,1).toUpperCase() }}</div>
+              <div class="detail-name">
+                <h3>{{ selected.username }}</h3>
+                <p>{{ selected.status === 'ACTIVE' ? '账号可登录' : '账号已禁用' }}</p>
+              </div>
+            </div>
+            <div class="kv">
+              <div class="kv-row">
+                <span>状态</span>
+                <span class="status-pill" :class="selected.status === 'ACTIVE' ? 'active' : 'disabled'">
+                  <i :data-lucide="selected.status === 'ACTIVE' ? 'circle-check' : 'ban'" width="14" height="14"></i>
+                  {{ selected.status === 'ACTIVE' ? '启用' : '禁用' }}
+                </span>
+              </div>
+              <div class="kv-row"><span>最近登录</span><span>{{ selected.lastLoginAt }}</span></div>
+              <div class="kv-row"><span>最近活跃</span><span>{{ selected.lastActiveAt }}</span></div>
+              <div class="kv-row"><span>近 7 日记录</span><span>{{ selected.weeklyRecords }} 条</span></div>
+              <div class="kv-row"><span>重置后改密</span><span>{{ selected.mustChangePassword ? '需要' : '不需要' }}</span></div>
+            </div>
+            <div class="action-stack">
+              <button class="btn primary full" type="button" @click="openReset(selected)">
+                <i data-lucide="key-round" width="17" height="17"></i>
+                重置密码
+              </button>
+              <button
+                class="btn secondary full status-action"
+                :class="{ enable: selected.status !== 'ACTIVE' }"
+                type="button"
+                @click="toggleStatus(selected)"
+              >
+                <i :data-lucide="selected.status === 'ACTIVE' ? 'ban' : 'circle-check'" width="17" height="17"></i>
+                {{ selected.status === 'ACTIVE' ? '禁用账号' : '启用账号' }}
+              </button>
+            </div>
+            <div>
+              <p class="helper">近 7 日活跃趋势</p>
+              <div class="activity-bars">
+                <div class="bar-row" v-for="item in selected.trend" :key="item.day">
+                  <span>{{ item.day }}</span>
+                  <div class="bar"><span :style="{width:item.value + '%'}"></span></div>
+                  <strong>{{ item.count }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </section>
+
+    <div class="modal-backdrop" v-if="resetModal" @click.self="resetModal = false">
+      <article class="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+        <div class="modal-head">
+          <div>
+            <h2 id="reset-title">重置 {{ resetTarget.username }} 的密码</h2>
+            <p class="subtitle">生成临时密码后，该用户下次登录必须修改密码。</p>
+          </div>
+          <button class="icon-btn" type="button" @click="resetModal = false" aria-label="关闭弹窗">
+            <i data-lucide="x" width="17" height="17"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="segmented-field">
+            <span class="segmented-label">临时密码生成方式</span>
+            <div class="segmented-control" role="radiogroup" aria-label="临时密码生成方式">
+              <button
+                type="button"
+                class="segment-option"
+                :class="{ active: resetMode === 'auto' }"
+                role="radio"
+                :aria-checked="resetMode === 'auto'"
+                @click="resetMode = 'auto'"
+              >
+                <i data-lucide="sparkles" width="18" height="18"></i>
+                <span>
+                  <strong>自动生成</strong>
+                  <span>推荐，减少弱密码</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="segment-option"
+                :class="{ active: resetMode === 'manual' }"
+                role="radio"
+                :aria-checked="resetMode === 'manual'"
+                @click="resetMode = 'manual'"
+              >
+                <i data-lucide="keyboard" width="18" height="18"></i>
+                <span>
+                  <strong>手动设置</strong>
+                  <span>用于线下约定密码</span>
+                </span>
+              </button>
+            </div>
+          </div>
+          <label v-if="resetMode === 'manual'">
+            临时密码
+            <input v-model="manualPassword" placeholder="输入至少 8 位临时密码">
+          </label>
+          <div class="temp-password" v-if="generatedPassword">
+            <div>
+              <p class="helper">请复制并通过线下渠道发给用户</p>
+              <strong>{{ generatedPassword }}</strong>
+            </div>
+            <button class="btn secondary" type="button">
+              <i data-lucide="copy" width="16" height="16"></i>
+              复制
+            </button>
+          </div>
+          <div class="alert warn">
+            <i data-lucide="shield-alert" width="17" height="17"></i>
+            <span>系统只保存密码哈希。管理员只能看到本次生成的临时密码，关闭弹窗后不再展示。</span>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn secondary" type="button" @click="resetModal = false">取消</button>
+          <button class="btn primary" type="button" @click="confirmReset">
+            <i data-lucide="rotate-ccw-key" width="17" height="17"></i>
+            确认重置
+          </button>
+        </div>
+      </article>
+    </div>
+  </main>
+</div>
+
+<script>
+const { createApp, nextTick } = Vue;
+
+createApp({
+  data(){
+    const users = [
+      {username:'chenyu',status:'ACTIVE',createdAt:'2026-05-17',lastLoginAt:'今天 09:18',lastActiveAt:'今天 10:42',weeklyRecords:46,mustChangePassword:false,trend:[{day:'周四',value:42,count:6},{day:'周五',value:72,count:10},{day:'周六',value:24,count:3},{day:'周日',value:18,count:2},{day:'周一',value:86,count:12},{day:'周二',value:65,count:9},{day:'今天',value:29,count:4}]},
+      {username:'lin_admin_test',status:'ACTIVE',createdAt:'2026-05-21',lastLoginAt:'昨天 18:04',lastActiveAt:'昨天 20:15',weeklyRecords:18,mustChangePassword:true,trend:[{day:'周四',value:30,count:3},{day:'周五',value:50,count:5},{day:'周六',value:0,count:0},{day:'周日',value:20,count:2},{day:'周一',value:70,count:7},{day:'周二',value:10,count:1},{day:'今天',value:0,count:0}]},
+      {username:'morgan',status:'DISABLED',createdAt:'2026-05-03',lastLoginAt:'2026-05-25 08:12',lastActiveAt:'2026-05-25 08:44',weeklyRecords:0,mustChangePassword:false,trend:[{day:'周四',value:0,count:0},{day:'周五',value:0,count:0},{day:'周六',value:0,count:0},{day:'周日',value:0,count:0},{day:'周一',value:0,count:0},{day:'周二',value:0,count:0},{day:'今天',value:0,count:0}]},
+      {username:'qiao',status:'ACTIVE',createdAt:'2026-05-28',lastLoginAt:'今天 07:53',lastActiveAt:'今天 08:20',weeklyRecords:31,mustChangePassword:false,trend:[{day:'周四',value:24,count:2},{day:'周五',value:48,count:4},{day:'周六',value:48,count:4},{day:'周日',value:36,count:3},{day:'周一',value:96,count:8},{day:'周二',value:72,count:6},{day:'今天',value:48,count:4}]},
+      {username:'sunny',status:'ACTIVE',createdAt:'2026-04-29',lastLoginAt:'2026-05-30 13:19',lastActiveAt:'2026-05-30 13:21',weeklyRecords:5,mustChangePassword:false,trend:[{day:'周四',value:20,count:1},{day:'周五',value:20,count:1},{day:'周六',value:60,count:3},{day:'周日',value:0,count:0},{day:'周一',value:0,count:0},{day:'周二',value:0,count:0},{day:'今天',value:0,count:0}]}
+    ];
+    return {
+      view:'login',
+      login:{username:'admin',password:'123456'},
+      showPassword:false,
+      forgotUsername:'',
+      forgotSubmitted:false,
+      keyword:'',
+      statusFilter:'all',
+      users,
+      selected:users[0],
+      resetModal:false,
+      resetTarget:users[0],
+      resetMode:'auto',
+      manualPassword:'',
+      generatedPassword:'',
+      adminMenuOpen:false,
+      userMenuOpen:false
+    };
+  },
+  computed:{
+    filteredUsers(){
+      return this.users.filter(user => {
+        const matchKeyword = user.username.toLowerCase().includes(this.keyword.toLowerCase());
+        const matchStatus = this.statusFilter === 'all' || user.status === this.statusFilter;
+        return matchKeyword && matchStatus;
+      });
+    }
+  },
+  methods:{
+    setView(view){
+      this.view = view;
+      this.adminMenuOpen = false;
+      this.userMenuOpen = false;
+      this.$nextTick(this.renderIcons);
+    },
+    fillAdmin(){
+      this.login.username = 'admin';
+      this.login.password = '123456';
+    },
+    handleLogin(){
+      if(this.login.username === 'admin' && this.login.password === '123456'){
+        this.setView('changePassword');
+        return;
+      }
+      if(this.login.username === 'admin'){
+        this.setView('admin');
+        return;
+      }
+      this.setView('userHome');
+    },
+    openReset(user){
+      this.resetTarget = user;
+      this.resetMode = 'auto';
+      this.manualPassword = '';
+      this.generatedPassword = '';
+      this.resetModal = true;
+      this.$nextTick(this.renderIcons);
+    },
+    confirmReset(){
+      this.generatedPassword = this.resetMode === 'manual' && this.manualPassword
+        ? this.manualPassword
+        : 'Tmp-' + Math.random().toString(36).slice(2,6).toUpperCase() + '-2026';
+      this.resetTarget.mustChangePassword = true;
+      this.$nextTick(this.renderIcons);
+    },
+    toggleStatus(user){
+      user.status = user.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+      if(this.selected.username === user.username){
+        this.selected = user;
+      }
+      this.$nextTick(this.renderIcons);
+    },
+    renderIcons(){
+      if(window.lucide){
+        window.lucide.createIcons();
+      }
+    }
+  },
+  mounted(){
+    this.renderIcons();
+  },
+  updated(){
+    this.renderIcons();
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

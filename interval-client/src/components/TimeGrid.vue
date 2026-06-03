@@ -35,7 +35,7 @@
             :key="slotIndexFor(hour, quarter)"
             :slot-index="slotIndexFor(hour, quarter)"
             :slot="slotsByIndex.get(slotIndexFor(hour, quarter))"
-            :selected="selectedSlotIndexes.includes(slotIndexFor(hour, quarter))"
+            :selected="renderedSelectedSlotIndexes.includes(slotIndexFor(hour, quarter))"
             :preview="dragPreviewSlotIndexes.includes(slotIndexFor(hour, quarter))"
             @select="handleSelect"
             @drag-start="handleDragStart"
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import TimeSlotCell from '@/components/TimeSlotCell.vue';
 import { useSlotSelection } from '@/composables/useSlotSelection';
 import type { TimeSlotDto } from '@/types/timeSlot';
@@ -58,9 +58,10 @@ import type { TimeSlotDto } from '@/types/timeSlot';
 interface TimeGridProps {
   slots: TimeSlotDto[];
   loading?: boolean;
+  selectedSlotIndexes?: number[];
 }
 
-const props = withDefaults(defineProps<TimeGridProps>(), { loading: false });
+const props = withDefaults(defineProps<TimeGridProps>(), { loading: false, selectedSlotIndexes: undefined });
 const emit = defineEmits<{
   (e: 'selectionChange', slotIndexes: number[]): void;
   (e: 'deleteSlot', slotId: number): void;
@@ -75,6 +76,17 @@ const {
   endDrag,
 } = useSlotSelection();
 const slotsByIndex = computed(() => new Map(props.slots.map((slot) => [slot.slotIndex, slot])));
+const renderedSelectedSlotIndexes = computed(() => props.selectedSlotIndexes ?? selectedSlotIndexes.value);
+let pointerInputSeen = false;
+
+watch(
+  () => props.selectedSlotIndexes,
+  (slotIndexes) => {
+    if (!slotIndexes) return;
+    selectedSlotIndexes.value = [...slotIndexes];
+  },
+  { immediate: true },
+);
 
 function handleSelect(slotIndex: number, event: MouseEvent) {
   clickSlot(slotIndex);
@@ -83,37 +95,57 @@ function handleSelect(slotIndex: number, event: MouseEvent) {
 
 function handleDragStart(slotIndex: number, event: PointerEvent | MouseEvent) {
   if (event.button !== 0) return;
+  if (isCompatibilityMouseEvent(event)) return;
+  rememberPointerInput(event);
   beginDrag(slotIndex);
 }
 
 function handleDragEnter(slotIndex: number, event: PointerEvent | MouseEvent) {
+  if (isCompatibilityMouseEvent(event)) return;
+  rememberPointerInput(event);
   if (event.buttons !== 1 && event.buttons !== 0) return;
   moveDrag(slotIndex);
 }
 
-function handleDragEnd() {
+function handleDragEnd(event?: PointerEvent | MouseEvent) {
+  if (event && isCompatibilityMouseEvent(event)) return;
+  if (event) rememberPointerInput(event);
   endDrag();
   emit('selectionChange', selectedSlotIndexes.value);
 }
 
 function handleGridPointerMove(event: PointerEvent) {
+  rememberPointerInput(event);
   if (event.buttons !== 1) return;
   moveDragToPoint(event.clientX, event.clientY);
 }
 
 function handleGridMouseMove(event: MouseEvent) {
+  if (isCompatibilityMouseEvent(event)) return;
   if (event.buttons !== 1) return;
   moveDragToPoint(event.clientX, event.clientY);
 }
 
 function handlePointerLeave(event: PointerEvent) {
+  rememberPointerInput(event);
   if (event.buttons !== 1) return;
   handleDragEnd();
 }
 
 function handleMouseLeave(event: MouseEvent) {
+  if (isCompatibilityMouseEvent(event)) return;
   if (event.buttons !== 1) return;
   handleDragEnd();
+}
+
+function isCompatibilityMouseEvent(event: PointerEvent | MouseEvent) {
+  return pointerInputSeen && event.type.startsWith('mouse');
+}
+
+function rememberPointerInput(event: PointerEvent | MouseEvent) {
+  if (event.type.startsWith('pointer')) {
+    pointerInputSeen = true;
+  }
 }
 
 function moveDragToPoint(clientX: number, clientY: number) {
@@ -142,13 +174,17 @@ function hourLabel(hour: number): string {
 
 <style scoped>
 .grid-card {
+  --time-board-surface: #edf4f8;
+  --time-board-surface-strong: #dfeaf2;
+  --time-board-line: rgba(148, 163, 184, 0.28);
   background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.96)),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.03), transparent 40%);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 24px;
+    radial-gradient(circle at 18% 0%, rgba(14, 165, 233, 0.10), transparent 30%),
+    radial-gradient(circle at 100% 12%, rgba(129, 140, 248, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.90));
+  border: 1px solid rgba(203, 213, 225, 0.86);
+  border-radius: 22px;
   padding: 18px;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.07);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
 }
 
 .grid-head {
@@ -167,7 +203,7 @@ h2 {
 
 .status {
   margin: 0;
-  color: #64748b;
+  color: #475569;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -184,21 +220,24 @@ h2 {
   align-items: center;
   min-height: 34px;
   padding: 0 12px;
-  border: 1px solid rgba(226, 232, 240, 0.85);
+  border: 1px solid rgba(203, 213, 225, 0.72);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.58);
   color: #475569;
   font-size: 12px;
   font-weight: 800;
 }
 
 .time-board {
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 20px;
   background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.88), rgba(255, 255, 255, 0.96)),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.03), transparent 40%);
+    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.62), transparent 34%),
+    linear-gradient(180deg, var(--time-board-surface) 0%, var(--time-board-surface-strong) 100%);
   padding: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    inset 0 -1px 0 rgba(15, 23, 42, 0.03);
 }
 
 .time-board-header,
@@ -213,9 +252,9 @@ h2 {
 }
 
 .time-board-header div {
-  color: #cbd5e1;
-  font-size: 10px;
-  font-weight: 700;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
   text-align: center;
 }
 
@@ -227,6 +266,7 @@ h2 {
 
 .time-row {
   margin-bottom: 6px;
+  border-radius: 13px;
 }
 
 .hour-label {
@@ -234,10 +274,11 @@ h2 {
   align-items: center;
   justify-content: flex-end;
   padding-right: 12px;
-  color: #cbd5e1;
-  font-size: 11px;
+  border-right: 1px solid var(--time-board-line);
+  color: #475569;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 900;
 }
 
 @media (max-width: 780px) {

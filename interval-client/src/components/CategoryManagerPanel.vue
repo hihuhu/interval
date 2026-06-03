@@ -1,6 +1,6 @@
 <template>
-  <section class="category-panel" aria-labelledby="category-manager-title">
-    <header>
+  <section class="category-panel" :class="{ embedded }" aria-labelledby="category-manager-title">
+    <header v-if="!embedded">
       <div>
         <p class="eyebrow">分类管理</p>
         <h2 id="category-manager-title">维护时间分类</h2>
@@ -69,9 +69,10 @@ interface CategoryDraft {
 
 interface CategoryManagerPanelProps {
   categories: CategoryDto[];
+  embedded?: boolean;
 }
 
-const props = defineProps<CategoryManagerPanelProps>();
+const props = withDefaults(defineProps<CategoryManagerPanelProps>(), { embedded: false });
 const emit = defineEmits<{
   (e: 'create', payload: CreateCategoryRequest): void;
   (e: 'update', categoryId: number, payload: UpdateCategoryRequest): void;
@@ -136,6 +137,14 @@ function getDraft(category: CategoryDto) {
   background: rgba(255, 255, 255, 0.76);
   box-shadow: 0 14px 38px rgba(15, 23, 42, 0.06);
   padding: 20px;
+}
+
+.category-panel.embedded {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 header {

@@ -45,33 +45,71 @@ const timeRange = computed(() => slotIndexToRange(props.slotIndex));
 const cellLabel = computed(() => props.slot?.categoryDisplayName || props.slot?.categoryName || '');
 const tooltipText = computed(() => {
   if (!props.slot) return timeRange.value;
-  return [timeRange.value, props.slot.activityName, props.slot.categoryDisplayName, props.slot.note]
-    .filter(Boolean)
-    .join(' / ');
+  return uniqueText([
+    timeRange.value,
+    props.slot.categoryDisplayName || props.slot.categoryName,
+    props.slot.activityName,
+    props.slot.note,
+  ]).join(' / ');
 });
 const ariaLabel = computed(() => {
   if (!props.slot) return `${timeRange.value} empty`;
-  return `${timeRange.value} ${props.slot.activityName || props.slot.categoryDisplayName} ${props.slot.categoryDisplayName}`;
+  return uniqueText([
+    timeRange.value,
+    props.slot.categoryDisplayName || props.slot.categoryName,
+    props.slot.activityName,
+  ]).join(' ');
 });
 
 const cellStyle = computed(() => {
   if (!props.slot?.categoryColor) return undefined;
   return {
     '--slot-color': props.slot.categoryColor,
-    backgroundColor: `${props.slot.categoryColor}24`,
-    borderColor: `${props.slot.categoryColor}52`,
+    '--slot-text-color': readableColor(props.slot.categoryColor),
+    '--slot-surface': `${props.slot.categoryColor}26`,
+    '--slot-surface-strong': `${props.slot.categoryColor}40`,
+    '--slot-border': `${props.slot.categoryColor}66`,
   };
 });
+
+function readableColor(color: string) {
+  const normalized = color.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return '#1e293b';
+
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+
+  if (green > red + blue && green > 150) return '#14532d';
+  if (red > 200 && green > 150 && blue < 130) return '#7c2d12';
+  if (red > 180 && blue > 150) return '#581c87';
+  if (blue > red && blue > green) return '#1e3a8a';
+  return '#334155';
+}
+
+function uniqueText(values: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+  return values.flatMap((value) => {
+    const text = value?.trim();
+    if (!text || seen.has(text)) return [];
+    seen.add(text);
+    return [text];
+  });
+}
 </script>
 
 <style scoped>
 .slot-cell {
+  --empty-slot-surface: rgba(255, 255, 255, 0.46);
+  --empty-slot-surface-hover: rgba(255, 255, 255, 0.72);
   position: relative;
-  height: 40px;
-  min-height: 40px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  height: 42px;
+  min-height: 42px;
+  border: 1px solid rgba(148, 163, 184, 0.20);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.88);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.18)),
+    var(--empty-slot-surface);
   padding: 0 8px;
   text-align: center;
   cursor: pointer;
@@ -81,42 +119,74 @@ const cellStyle = computed(() => {
   overflow: hidden;
   user-select: none;
   touch-action: none;
-  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  transition: background-color .14s ease, border-color .14s ease, box-shadow .14s ease, color .14s ease;
+}
+
+.slot-cell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.32), transparent 58%);
+  opacity: 0.82;
+  pointer-events: none;
 }
 
 .slot-cell:hover {
-  transform: translateY(-1px);
-  border-color: rgba(129, 140, 248, 0.75);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.22) inset, 0 10px 16px rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.35);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.60), rgba(255, 255, 255, 0.22)),
+    var(--empty-slot-surface-hover);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.42),
+    inset 0 0 0 2px rgba(99, 102, 241, 0.08);
 }
 
 .occupied {
-  color: var(--slot-color, #6366f1);
+  border-color: var(--slot-border, rgba(99, 102, 241, 0.45));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.10)),
+    linear-gradient(90deg, var(--slot-surface-strong, #c7d2fe) 0 5px, transparent 5px),
+    var(--slot-surface, #eef2ff);
+  color: var(--slot-text-color, #1e293b);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.30),
+    0 1px 2px rgba(15, 23, 42, 0.025);
 }
 
 .selected {
   position: relative;
-  border-color: rgba(79, 70, 229, 0.72);
+  border-color: rgba(79, 70, 229, 0.70);
   background:
-    linear-gradient(180deg, rgba(238, 242, 255, 0.72), rgba(255, 255, 255, 0.92)),
-    rgba(255, 255, 255, 0.92);
+    linear-gradient(180deg, rgba(238, 242, 255, 0.86), rgba(224, 231, 255, 0.80)),
+    #e0e7ff;
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.48) inset,
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 9px 15px rgba(79, 70, 229, 0.08);
-  transform: translateY(-1px);
+    0 0 0 2px rgba(79, 70, 229, 0.42) inset,
+    0 1px 0 rgba(255, 255, 255, 0.74) inset;
+  color: #312e81;
+}
+
+.slot-cell.selected:hover {
+  border-color: rgba(67, 56, 202, 0.86);
+  background:
+    linear-gradient(180deg, rgba(238, 242, 255, 0.94), rgba(224, 231, 255, 0.88)),
+    #e0e7ff;
+  box-shadow:
+    0 0 0 2px rgba(67, 56, 202, 0.56) inset,
+    0 0 0 1px rgba(67, 56, 202, 0.18);
+  color: #312e81;
 }
 
 .preview {
   position: relative;
-  border-color: rgba(96, 165, 250, 0.58);
+  border-color: rgba(14, 165, 233, 0.48);
   background:
-    linear-gradient(180deg, rgba(239, 246, 255, 0.78), rgba(255, 255, 255, 0.88)),
-    rgba(255, 255, 255, 0.88);
+    linear-gradient(180deg, rgba(240, 249, 255, 0.86), rgba(224, 242, 254, 0.72)),
+    #e0f2fe;
   box-shadow:
-    0 0 0 2px rgba(96, 165, 250, 0.24) inset,
-    0 8px 14px rgba(59, 130, 246, 0.07);
-  transform: translateY(-1px);
+    0 0 0 2px rgba(14, 165, 233, 0.20) inset,
+    0 0 0 1px rgba(14, 165, 233, 0.10);
 }
 
 .preview::after {
@@ -124,7 +194,7 @@ const cellStyle = computed(() => {
   position: absolute;
   inset: 0;
   border-radius: 11px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0), rgba(186, 230, 253, 0.26));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(125, 211, 252, 0.18));
   pointer-events: none;
 }
 
@@ -136,11 +206,12 @@ const cellStyle = computed(() => {
 .slot-label {
   width: 100%;
   color: currentColor;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.05;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.46);
 }
 </style>

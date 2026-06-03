@@ -46,6 +46,8 @@ describe('SelectionEditorPanel', () => {
     expect(wrapper.text()).toContain('2 个时间块');
     expect(wrapper.text()).toContain('30 分钟');
     expect(wrapper.find('[data-testid="category-option-1"]').classes()).toContain('active');
+    expect(wrapper.find('[data-testid="category-option-1"] [data-testid="selected-category-check"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="category-option-2"] [data-testid="selected-category-check"]').exists()).toBe(false);
     expect((wrapper.find('textarea[name="note"]').element as HTMLTextAreaElement).value).toBe('Planning');
   });
 

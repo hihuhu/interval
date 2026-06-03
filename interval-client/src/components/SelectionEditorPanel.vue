@@ -1,23 +1,45 @@
 <template>
   <section class="selection-panel" aria-labelledby="selection-editor-title">
     <div v-if="selectedSlotIndexes.length === 0" class="empty-panel">
-      <div class="empty-icon">
-        <MousePointer2 :size="18" />
+      <div class="panel-topline">
+        <div class="empty-icon">
+          <MousePointer2 :size="18" />
+        </div>
+        <button
+          type="button"
+          class="ghost-action manage-button"
+          data-testid="open-category-manager"
+          @click="$emit('manageCategories')"
+        >
+          <Settings2 :size="15" />
+          管理分类
+        </button>
       </div>
       <p class="eyebrow">选择时间块</p>
       <h2 id="selection-editor-title">先选一个时间块</h2>
-      <p>右侧面板会展示摘要、分类和备注编辑。拖拽可快速选择连续时间，点击可补选离散时间块。</p>
+      <p>选择后在这里设置分类和备注。</p>
     </div>
 
     <form v-else class="selection-form" @submit.prevent="submit">
       <header>
         <div>
-          <p class="eyebrow">当前选择中</p>
+          <p class="eyebrow">当前选择</p>
           <h2 id="selection-editor-title">{{ selectedSlotIndexes.length }} 个时间块</h2>
         </div>
-        <button type="button" class="ghost-action icon-button" aria-label="取消选择" @click="$emit('cancel')">
-          <X :size="16" />
-        </button>
+        <div class="header-actions">
+          <button
+            type="button"
+            class="ghost-action manage-button"
+            data-testid="open-category-manager"
+            @click="$emit('manageCategories')"
+          >
+            <Settings2 :size="15" />
+            管理分类
+          </button>
+          <button type="button" class="ghost-action icon-button" aria-label="取消选择" @click="$emit('cancel')">
+            <X :size="16" />
+          </button>
+        </div>
       </header>
 
       <div class="summary-grid">
@@ -56,6 +78,7 @@
             type="button"
             class="category-option"
             :class="{ active: selectedCategoryId === category.id }"
+            :style="{ '--category-color': category.colorCode }"
             :disabled="saving"
             :aria-checked="selectedCategoryId === category.id"
             role="radio"
@@ -64,13 +87,19 @@
           >
             <span class="category-dot" :style="{ backgroundColor: category.colorCode }"></span>
             <span class="category-name">{{ category.name }}</span>
+            <span
+              v-if="selectedCategoryId === category.id"
+              class="selected-category-check"
+              data-testid="selected-category-check"
+              aria-hidden="true"
+            >
+              <Check :size="13" :stroke-width="3" />
+            </span>
           </button>
         </div>
       </div>
-      <p class="field-hint">
-        <span v-if="editorState.categoryMode === 'mixed'">当前选择包含多个分类，请重新指定一个统一分类。</span>
-        <span v-else-if="editorState.categoryMode === 'single'">当前选择已自动回显同一分类。</span>
-        <span v-else>当前选择还没有分类，保存时会按你新选的分类写入。</span>
+      <p v-if="editorState.categoryMode === 'mixed'" class="field-hint">
+        当前选择包含多个分类，请重新指定一个统一分类。
       </p>
 
       <label>
@@ -84,10 +113,8 @@
           @input="noteTouched = true"
         />
       </label>
-      <p class="field-hint">
-        <span v-if="editorState.noteMode === 'mixed'">当前选择包含不同备注；不修改这里会保留原备注。</span>
-        <span v-else-if="editorState.noteMode === 'single'">已自动回显统一备注；修改后会批量覆盖。</span>
-        <span v-else>留空可不写备注；主动清空并保存会移除备注。</span>
+      <p v-if="editorState.noteMode === 'mixed'" class="field-hint">
+        当前选择包含不同备注；不修改这里会保留原备注。
       </p>
 
       <button type="submit" class="primary-action submit-button" :disabled="saving || selectedCategoryId === null">
@@ -100,7 +127,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { AlertTriangle, MousePointer2, Save, Trash2, X } from '@lucide/vue';
+import { AlertTriangle, Check, MousePointer2, Save, Settings2, Trash2, X } from '@lucide/vue';
 import { deriveSelectionEditorState } from '@/composables/useSelectionEditorState';
 import { slotIndexToRange } from '@/composables/useTimeSlots';
 import type { CategoryDto } from '@/types/category';
@@ -118,6 +145,7 @@ const emit = defineEmits<{
   (e: 'save', payload: { slotIndexes: number[]; categoryId: number; note: string | null; noteTouched: boolean }): void;
   (e: 'erase', slotIndexes: number[]): void;
   (e: 'cancel'): void;
+  (e: 'manageCategories'): void;
 }>();
 
 const selectedCategoryId = ref<number | null>(null);
@@ -158,29 +186,37 @@ function submit() {
 
 <style scoped>
 .selection-panel {
-  border: 1px solid rgba(199, 210, 254, 0.7);
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(238, 242, 255, 0.80));
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
-  padding: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.06);
+  padding: 18px;
 }
 
 .empty-panel {
-  min-height: 250px;
+  min-height: 210px;
   display: grid;
   align-content: center;
   gap: 10px;
   color: #64748b;
 }
 
+.panel-topline,
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .empty-icon {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  border-radius: 15px;
-  background: rgba(99, 102, 241, 0.10);
-  color: #4f46e5;
+  border-radius: 12px;
+  background: rgba(241, 245, 249, 0.9);
+  color: #64748b;
 }
 
 .empty-panel h2,
@@ -197,7 +233,7 @@ function submit() {
 
 .eyebrow {
   margin: 0;
-  color: #4338ca;
+  color: #64748b;
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -205,7 +241,7 @@ function submit() {
 
 .selection-form {
   display: grid;
-  gap: 14px;
+  gap: 13px;
 }
 
 header {
@@ -221,6 +257,12 @@ header {
   padding: 0;
 }
 
+.manage-button {
+  min-height: 38px;
+  padding: 0 11px;
+  font-size: 12px;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -229,9 +271,9 @@ header {
 
 .summary-grid div {
   border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: 16px;
+  border-radius: 14px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.72);
+  background: #f8fafc;
 }
 
 .summary-grid span,
@@ -252,9 +294,9 @@ label span,
 textarea {
   width: 100%;
   border: 1px solid #dbe3ef;
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 11px 12px;
-  background: rgba(255, 255, 255, 0.9);
+  background: #ffffff;
   color: #0f172a;
 }
 
@@ -272,28 +314,42 @@ textarea {
 }
 
 .category-option {
+  --category-color: #6366f1;
   min-height: 42px;
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid transparent;
-  border-radius: 14px;
-  background: transparent;
+  border: 1px solid rgba(226, 232, 240, 0.68);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.54);
   padding: 0 12px;
   color: #334155;
   cursor: pointer;
   text-align: left;
-  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease;
 }
 
 .category-option:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(148, 163, 184, 0.48);
+  background: #f8fafc;
 }
 
 .category-option.active {
-  border-color: rgba(129, 140, 248, 0.42);
-  background: rgba(238, 242, 255, 0.72);
-  box-shadow: 0 0 0 1px rgba(199, 210, 254, 0.72) inset, 0 6px 14px rgba(79, 70, 229, 0.06);
+  border-color: var(--category-color);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--category-color) 16%, white) 0 4px, transparent 4px),
+    #eef2ff;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--category-color) 18%, transparent),
+    0 0 0 1px rgba(255, 255, 255, 0.78) inset;
+  color: #111827;
+}
+
+.category-option.active:hover:not(:disabled) {
+  border-color: var(--category-color);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--category-color) 20%, white) 0 4px, transparent 4px),
+    #e0e7ff;
 }
 
 .category-option:disabled {
@@ -317,6 +373,22 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.category-option.active .category-name {
+  color: #111827;
+  font-weight: 900;
+}
+
+.selected-category-check {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--category-color);
+  color: #ffffff;
 }
 
 textarea {
@@ -356,5 +428,18 @@ textarea {
 
 .submit-button {
   min-height: 46px;
+}
+
+@media (max-width: 720px) {
+  header,
+  .panel-topline {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header-actions,
+  .manage-button {
+    width: 100%;
+  }
 }
 </style>

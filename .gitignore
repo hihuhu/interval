@@ -45,6 +45,9 @@ logs/
 .cursor/server/
 .cursor/workspaceStorage/
 
+# Codex workspace cache
+.codex/
+
 # =========================
 # Root env files
 # =========================

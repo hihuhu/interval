@@ -4,6 +4,214 @@
 
 ---
 
+## [2026-05-28] Time Grid 分类回显、悬浮信息与性能优化
+
+### 📋 本次目标
+- 修复时间块重新点击后右侧分类回显不明显、悬浮信息重复、选中块 hover 后不够明显，以及页面拖动/悬停卡顿的问题。
+
+### ✅ 已完成操作
+- ✅ 右侧分类按钮增加分类色边框、左侧色条和勾选徽标，已选分类回显更清楚。
+- ✅ 时间块 `title` 和 `aria-label` 改为去重拼接，避免出现“运动 / 运动”这类重复信息。
+- ✅ 为 `.slot-cell.selected:hover` 增加专门样式，确保选中块 hover 时仍保持明确选中态。
+- ✅ 移除时间格 hover/selected/preview 的 `translateY` 位移和大面积阴影，改成轻量描边与内阴影，减少鼠标移动时的重绘压力。
+- ✅ 拖拽时识别 pointer 事件后的兼容 mouse 事件，避免同一次拖拽被重复处理和重复派发选择变更。
+- ✅ 重启前端 Vite 开发服务，清掉旧模块时间戳缓存，确保浏览器实际加载最新组件。
+
+### 🔧 技术决策
+- **决策**：保留原生 `title` 提示，但内容改成去重后的短格式。
+- **原因**：当前需求是清理重复与信息噪音，不引入额外浮层能减少渲染和交互复杂度。
+- **影响**：悬浮提示更简洁；后续如果需要更丰富信息，可再做轻量自定义 tooltip。
+
+- **决策**：把单元格反馈从位移/外阴影改为描边/内阴影。
+- **原因**：96 个网格单元频繁 hover 时，transform 和大阴影更容易造成视觉抖动与重绘压力。
+- **影响**：页面更稳，拖拽和悬停体感更轻，选中态也更一致。
+
+### ✅ 验证结果
+- ✅ 红绿验证：新增失败测试覆盖重复 tooltip、右侧已选分类勾选、selected hover 样式和 pointer/mouse 重复事件。
+- ✅ 定向测试：`npm run test -- TimeGrid.test.ts`，1 个测试文件 / 14 个测试通过。
+- ✅ 前端全量测试：`npm run test`，18 个测试文件 / 57 个测试通过。
+- ✅ 前端生产构建：`npm run build` 通过。
+- ✅ in-app browser 真实验证：点击已有“阅读”块后，右侧分类有彩色边框与勾选；悬浮 title 为 `01:15-01:30 / 阅读`；选中块无 `transform`；旧高成本 transition 不存在；控制台无 warning/error。
+
+### 📂 涉及文件
+- `interval-client/src/components/TimeGrid.vue`
+- `interval-client/src/components/TimeSlotCell.vue`
+- `interval-client/src/components/SelectionEditorPanel.vue`
+- `interval-client/src/__tests__/TimeGrid.test.ts`
+- `interval-client/src/__tests__/SelectionEditorPanel.test.ts`
+- `PROJECT_LOG.md`
+
+---
+
+## [2026-05-28] Time Grid 中间网格视觉重设计
+
+### 📋 本次目标
+- 根据反馈去掉中间网格“白底黑字表格感”，让时间网格更像正式产品里的柔和时间面板。
+
+### ✅ 已完成操作
+- ✅ 使用 `ui-ux-pro-max` 技能的视觉原则重新判断网格问题：避免纯白底、减少表格感、保持状态清楚、稳定交互尺寸。
+- ✅ 将 `TimeGrid` 底板改成蓝灰雾面渐变和柔和内阴影，不再是纯白/硬边框。
+- ✅ 将空时间格改成半透明浅色块，保留轻微高光和低对比边框。
+- ✅ 将已记录块改为分类色柔和底色 + 左侧分类色线，减少“黑字贴白底”的割裂感。
+- ✅ 调整选中和拖拽预览状态，增加轻微浮起、柔和描边和状态阴影。
+- ✅ 增加样式回归测试，防止中间网格回退到白色表格样式。
+
+### ⚠️ 遇到的问题
+- `ui-ux-pro-max` 的搜索脚本在本机技能目录中是坏链接；已读取技能文档并按其中关于可访问性、状态清晰、色彩和布局的原则直接落地。
+- in-app browser 截图接口本次超时；已改用真实浏览器 DOM 样式读取和控制台日志做验证。
+
+### ✅ 验证结果
+- ✅ 定向测试：`npm run test -- src/__tests__/TimeGrid.test.ts`，1 个测试文件 / 11 个测试通过。
+- ✅ 前端全量测试：`npm run test`，18 个测试文件 / 54 个测试通过。
+- ✅ 前端生产构建：`npm run build` 通过。
+- ✅ in-app browser 样式验证：中间底板为 `radial-gradient + linear-gradient` 蓝灰雾面背景；空格不再是 `#ffffff`；已记录块使用分类色背景与侧线；控制台无 warning/error。
+
+### 📂 涉及文件
+- `interval-client/src/components/TimeGrid.vue`
+- `interval-client/src/components/TimeSlotCell.vue`
+- `interval-client/src/__tests__/TimeGrid.test.ts`
+- `PROJECT_LOG.md`
+
+---
+
+## [2026-05-28] Time Grid 选择取消、网格可读性与日期弹层优化
+
+### 📋 本次目标
+- 根据浏览器实看反馈，修复右侧取消选择、提升时间网格文字可读性，并重新设计日期选择交互。
+
+### ✅ 已完成操作
+- ✅ 修复右侧编辑面板点击 X 后只清父组件、不清网格内部选中态的问题。
+- ✅ 将 `TimeGrid` 的选中状态改为可受父组件 `selectedSlotIndexes` 同步控制，避免清空后下一次点击恢复旧选择。
+- ✅ 加深时间网格小时标签、季度标题和已登记块文字颜色，提升分类标签可读性。
+- ✅ 调整已登记时间块的背景、边框和文字权重，让浅色分类也能看清。
+- ✅ 将原生日期输入改为自定义日期弹层：点击整块日期按钮即可打开，不再需要点系统小图标。
+- ✅ 日期弹层按当前整体浅色工作台风格重做，支持上月 / 下月、选择日期、今天快捷回到当天。
+- ✅ 补充回归测试，覆盖父级清空网格选择、清空后再点新格子、日期弹层打开和右侧 X 清空选择。
+
+### 🔧 技术决策
+- **决策**：保留隐藏的日期状态与自定义日历 UI，不再直接暴露原生 `input[type=date]`。
+- **原因**：原生日期控件在桌面浏览器中样式和触发区域不可控，无法满足“点整块直接弹出”和统一视觉风格。
+- **影响**：日期选择体验可控；后续如需键盘输入日期，可以再加一个轻量输入入口。
+
+- **决策**：`TimeGrid` 内部选择状态与父组件传入的 `selectedSlotIndexes` 同步。
+- **原因**：右侧取消选择是父组件动作，如果网格内部 composable 不同步，会在下一次点击时把旧选择带回来。
+- **影响**：右侧 X、日期切换、保存后清空等外部清空动作都会正确反映到网格内部状态。
+
+### ✅ 验证结果
+- ✅ 前端全量测试：`npm run test`，18 个测试文件 / 53 个测试通过。
+- ✅ 前端生产构建：`npm run build` 通过。
+- ✅ in-app browser 真实验证：日期按钮可打开弹层并选择 2026-05-27；“今天”回到 2026-05-28；右侧 X 清空后旧格子不再保持选中；再次点新格子只选择新格子；控制台无 Vue warning/error。
+
+### 📂 涉及文件
+- `interval-client/src/views/TimeGridView.vue`
+- `interval-client/src/components/TimeGrid.vue`
+- `interval-client/src/components/TimeSlotCell.vue`
+- `interval-client/src/__tests__/TimeGrid.test.ts`
+- `interval-client/src/__tests__/TimeGridView.test.ts`
+- `PROJECT_LOG.md`
+
+---
+
+## [2026-05-28] Time Grid 页面体验清理与分类管理弹窗
+
+### 📋 本次目标
+- 根据浏览器实看反馈，清理登录页、顶部导航、日期切换、时间网格视觉噪音，并重新设计右侧分类管理入口。
+
+### ✅ 已完成操作
+- ✅ 登录页移除开发账号提示与默认预填账号，保留手动输入登录。
+- ✅ 顶部导航移除“分类”入口，仅保留“时间格”和“统计”。
+- ✅ 重做日期切换条：改为前一天 / 今天 / 后一天图标化控制与日期输入组合。
+- ✅ 修复日期切换的本地日期格式化，避免 `toISOString()` 带来的时区偏移。
+- ✅ 降低时间网格的渐变、阴影和边框强度，减轻“晃眼”的视觉负担。
+- ✅ 将右侧常驻分类管理面板改为“管理分类”按钮触发的弹窗，减少工作台常驻信息压力。
+- ✅ 修复分类弹窗关闭按钮在真实浏览器中被 sticky header 覆盖的问题，移除 `main` 的低层级 stacking context。
+- ✅ 补充前端回归测试，覆盖登录页不预填、导航不显示分类、日期按钮、分类弹窗打开/关闭和弹窗层级约束。
+
+### 🔧 技术决策
+- **决策**：分类管理不再常驻右侧，改为从选择编辑面板打开弹窗。
+- **原因**：当前 Time Grid 的主任务是选时间块并记录，分类管理属于低频维护动作，弹窗能减少右侧区域的信息竞争。
+- **影响**：右侧只保留当前选择编辑；分类新建、编辑、删除集中在弹窗中完成。
+
+- **决策**：移除 `AppLayout main` 的 `z-index: 1`。
+- **原因**：`main` 创建的 stacking context 会让内部全屏弹窗低于兄弟 sticky header，真实点击会落到 header 上而不是关闭按钮。
+- **影响**：全屏弹窗可以正确覆盖顶部栏，关闭按钮可正常点击。
+
+### ✅ 验证结果
+- ✅ 前端全量测试：`npm run test`，18 个测试文件 / 49 个测试通过。
+- ✅ 前端生产构建：`npm run build` 通过。
+- ✅ in-app browser 真实验证：登录页无开发账号提示且无预填；登录后顶部不再显示“分类”；前一天按钮可切到 2026-05-27；分类管理弹窗可打开并关闭；控制台无 Vue warning/error。
+
+### 📝 下次待办
+- [ ] 继续真实体验保存记录、覆盖已有记录、擦除已登记块和分类删除/归档流程。
+- [ ] 根据实际使用反馈，再微调 Time Grid 工作台的信息密度与移动端布局。
+
+### 📂 涉及文件
+- `interval-client/src/views/LoginView.vue`
+- `interval-client/src/components/AppLayout.vue`
+- `interval-client/src/views/TimeGridView.vue`
+- `interval-client/src/components/SelectionEditorPanel.vue`
+- `interval-client/src/components/CategoryManagerPanel.vue`
+- `interval-client/src/components/TimeGrid.vue`
+- `interval-client/src/components/TimeSlotCell.vue`
+- `interval-client/src/__tests__/LoginView.test.ts`
+- `interval-client/src/__tests__/AppLayout.test.ts`
+- `interval-client/src/__tests__/TimeGridView.test.ts`
+- `interval-client/src/vite-env.d.ts`
+- `PROJECT_LOG.md`
+
+---
+
+## [2026-05-28] 前端 Vite 旧进程报错排查
+
+### 📋 本次目标
+- 排查浏览器中出现的前端开发服务器错误遮罩。
+
+### ✅ 已完成操作
+- ✅ 读取浏览器 DOM 与控制台状态，确认报错为 `Failed to resolve import "@/router" from "src/main.ts"`。
+- ✅ 检查 `vite.config.ts`、`tsconfig.json`、`src/main.ts` 和 `src/router/index.ts`，确认源码与别名配置本身完整。
+- ✅ 运行前端生产构建与路由测试，确认当前源码可以正常解析 `@/router`。
+- ✅ 定位当前 `5173` 前端进程为 2026-05-27 启动的旧 Vite 进程，重启前端开发服务器。
+
+### ✅ 验证结果
+- ✅ `npm run build` 通过。
+- ✅ `npm run test -- src/__tests__/router.test.ts` 通过，1 个测试文件 / 2 个测试通过。
+- ✅ 刷新浏览器后错误遮罩消失，登录页正常渲染。
+- ✅ 使用默认账号登录后成功进入 `/time-grid`，浏览器控制台无错误或警告。
+
+### 📝 下次待办
+- [ ] 若再次遇到 Vite import-analysis 遮罩，优先重启前端 dev server 并确认当前进程工作目录。
+
+### 📂 涉及文件
+- `PROJECT_LOG.md`
+
+---
+
+## [2026-05-28] README 中文说明整理与本地启动验证
+
+### 📋 本次目标
+- 将 `README.md` 整理为更清晰的中文项目首页，并启动前后端供本地预览。
+
+### ✅ 已完成操作
+- ✅ 重写 `README.md` 的项目介绍、当前能力、启动步骤、本地体验流程、开发约定和相关文档索引。
+- ✅ 确认前端 Vite 服务已在 `http://localhost:5173` 运行，进程来自当前项目的 `interval-client`。
+- ✅ 启动后端 Spring Boot 服务，默认 H2 数据库与种子账号初始化成功。
+- ✅ 在 Codex 内置浏览器中打开本地前端页面。
+
+### ✅ 验证结果
+- ✅ 前端首页请求 `http://localhost:5173` 返回 200。
+- ✅ 后端 H2 Console `http://localhost:8088/h2-console` 返回 200。
+- ✅ 默认账号登录接口 `POST /api/auth/login` 使用 `admin / 123ABCdef*` 返回 `SUCCESS` 和 JWT。
+
+### 📝 下次待办
+- [ ] 在浏览器中手动体验登录、时间格选择、保存备注、覆盖混合选择和擦除已登记块。
+- [ ] 若主流程确认稳定，继续细化右侧选择编辑面板或回到分类耗时统计功能。
+
+### 📂 涉及文件
+- `README.md`
+- `PROJECT_LOG.md`
+
+---
+
 ## [2026-05-27] Time Grid v2 UI iteration note
 
 Latest implementation-facing UI decisions are documented in:

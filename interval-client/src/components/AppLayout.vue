@@ -10,7 +10,6 @@
           <nav aria-label="主导航">
             <RouterLink class="nav-chip" :class="{ active: activeRoute === 'timeGrid' }" to="/time-grid">时间格</RouterLink>
             <RouterLink class="nav-chip" :class="{ active: activeRoute === 'stats' }" to="/stats">统计</RouterLink>
-            <span class="nav-chip">分类</span>
           </nav>
         </div>
         <div class="header-actions">
@@ -171,7 +170,6 @@ nav {
 
 main {
   position: relative;
-  z-index: 1;
   max-width: 1280px;
   margin: 0 auto;
   padding: 32px 24px 48px;

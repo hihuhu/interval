@@ -48,25 +48,65 @@
     </section>
 
     <section class="toolbar">
-      <div class="date-card surface-card-soft">
-        <CalendarDays :size="20" />
-        <div>
-          <span>当前日期</span>
-          <strong>{{ formattedDate }}</strong>
-          <small>{{ dayName }}</small>
+      <div class="date-strip surface-card-soft">
+        <div class="date-summary">
+          <CalendarDays :size="18" />
+          <div>
+            <span>当前日期</span>
+            <strong>{{ formattedDate }}</strong>
+            <small>{{ dayName }}</small>
+          </div>
         </div>
-        <input v-model="date" type="date" aria-label="选择日期" @change="reload" />
-      </div>
-      <div class="date-actions">
-        <button type="button" class="ghost-action" @click="shiftDate(-1)">
-          <ChevronLeft :size="16" />
-          前一天
-        </button>
-        <button type="button" class="primary-action today-button" @click="setToday">今天</button>
-        <button type="button" class="ghost-action" @click="shiftDate(1)">
-          后一天
-          <ChevronRight :size="16" />
-        </button>
+        <div class="date-actions" aria-label="日期切换">
+          <button type="button" class="date-icon-button" data-testid="previous-day" aria-label="前一天" @click="shiftDate(-1)">
+            <ChevronLeft :size="17" />
+          </button>
+          <button type="button" class="today-button" data-testid="today-button" @click="setToday">今天</button>
+          <button type="button" class="date-icon-button" data-testid="next-day" aria-label="后一天" @click="shiftDate(1)">
+            <ChevronRight :size="17" />
+          </button>
+          <div class="date-picker-shell" ref="datePickerRef">
+            <button
+              type="button"
+              class="date-trigger"
+              data-testid="date-trigger"
+              aria-haspopup="dialog"
+              :aria-expanded="datePickerOpen"
+              @click="toggleDatePicker"
+            >
+              <CalendarDays :size="15" />
+              <span>{{ compactDateText }}</span>
+            </button>
+            <div v-if="datePickerOpen" class="date-popover" data-testid="date-popover" role="dialog" aria-label="选择日期">
+              <div class="calendar-head">
+                <button type="button" class="calendar-nav" aria-label="上个月" @click="shiftCalendarMonth(-1)">
+                  <ChevronLeft :size="15" />
+                </button>
+                <strong>{{ calendarMonthLabel }}</strong>
+                <button type="button" class="calendar-nav" aria-label="下个月" @click="shiftCalendarMonth(1)">
+                  <ChevronRight :size="15" />
+                </button>
+              </div>
+              <div class="calendar-weekdays" aria-hidden="true">
+                <span v-for="weekday in calendarWeekdays" :key="weekday">{{ weekday }}</span>
+              </div>
+              <div class="calendar-grid">
+                <button
+                  v-for="day in calendarDays"
+                  :key="day.key"
+                  type="button"
+                  class="calendar-day"
+                  :class="{ muted: !day.inCurrentMonth, selected: day.isoDate === date, today: day.isoDate === todayDate }"
+                  :aria-label="day.ariaLabel"
+                  :aria-pressed="day.isoDate === date"
+                  @click="selectCalendarDate(day.isoDate)"
+                >
+                  {{ day.dayNumber }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -79,6 +119,7 @@
       <TimeGrid
         :slots="timeSlotStore.slots"
         :loading="timeSlotStore.loading"
+        :selected-slot-indexes="selectedSlotIndexes"
         @selection-change="handleSelectionChange"
         @delete-slot="deleteSlot"
       />
@@ -91,21 +132,53 @@
           @save="saveSelection"
           @erase="eraseSelection"
           @cancel="clearSelection"
+          @manage-categories="openCategoryManager"
         />
+      </aside>
+    </section>
+
+    <div
+      v-if="categoryManagerOpen"
+      class="modal-backdrop"
+      data-testid="category-manager-backdrop"
+      @click.self="closeCategoryManager"
+    >
+      <section
+        class="category-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="category-manager-title"
+      >
+        <div class="dialog-header">
+          <div>
+            <p class="dialog-eyebrow">分类管理</p>
+            <h2 id="category-manager-title">维护时间分类</h2>
+          </div>
+          <button
+            type="button"
+            class="ghost-action dialog-close"
+            data-testid="close-category-manager"
+            aria-label="关闭分类管理"
+            @click="closeCategoryManager"
+          >
+            <X :size="17" />
+          </button>
+        </div>
         <CategoryManagerPanel
           :categories="categoryStore.categories"
+          embedded
           @create="createCategory"
           @update="updateCategory"
           @delete="deleteCategory"
         />
-      </aside>
-    </section>
+      </section>
+    </div>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { CalendarDays, ChevronLeft, ChevronRight } from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { CalendarDays, ChevronLeft, ChevronRight, X } from '@lucide/vue';
 import { useRouter } from 'vue-router';
 import AppLayout from '@/components/AppLayout.vue';
 import CategoryManagerPanel from '@/components/CategoryManagerPanel.vue';
@@ -124,6 +197,11 @@ const timeSlotStore = useTimeSlotStore();
 const date = ref(timeSlotStore.selectedDate);
 const selectedSlotIndexes = ref<number[]>([]);
 const categoryNotice = ref<string | null>(null);
+const categoryManagerOpen = ref(false);
+const datePickerOpen = ref(false);
+const datePickerRef = ref<HTMLElement | null>(null);
+const calendarCursor = ref(startOfMonth(new Date(`${date.value}T00:00:00`)));
+const calendarWeekdays = ['一', '二', '三', '四', '五', '六', '日'];
 
 const recordedMinutes = computed(() => timeSlotStore.slots.length * 15);
 const recordedHoursText = computed(() => `${Math.floor(recordedMinutes.value / 60)}h`);
@@ -150,15 +228,86 @@ const formattedDate = computed(() => selectedDate.value.toLocaleDateString('zh-C
   day: 'numeric',
 }));
 const dayName = computed(() => selectedDate.value.toLocaleDateString('zh-CN', { weekday: 'long' }));
+const todayDate = computed(() => todayIsoDate());
+const compactDateText = computed(() => selectedDate.value.toLocaleDateString('zh-CN', {
+  month: '2-digit',
+  day: '2-digit',
+  weekday: 'short',
+}));
+const calendarMonthLabel = computed(() => calendarCursor.value.toLocaleDateString('zh-CN', {
+  year: 'numeric',
+  month: 'long',
+}));
+const calendarDays = computed(() => {
+  const firstDay = startOfMonth(calendarCursor.value);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const gridStart = new Date(firstDay);
+  gridStart.setDate(firstDay.getDate() - startOffset);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(gridStart);
+    day.setDate(gridStart.getDate() + index);
+    const isoDate = formatLocalDate(day);
+    return {
+      key: isoDate,
+      isoDate,
+      dayNumber: day.getDate(),
+      inCurrentMonth: day.getMonth() === calendarCursor.value.getMonth(),
+      ariaLabel: day.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long',
+      }),
+    };
+  });
+});
 
 onMounted(async () => {
+  document.addEventListener('click', handleOutsideDatePickerClick);
   await Promise.all([categoryStore.fetchCategories(), timeSlotStore.fetchDailySlots(date.value)]);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleOutsideDatePickerClick);
+});
+
+watch(date, (value) => {
+  calendarCursor.value = startOfMonth(new Date(`${value}T00:00:00`));
 });
 
 async function reload() {
   timeSlotStore.setDate(date.value);
   selectedSlotIndexes.value = [];
   await timeSlotStore.fetchDailySlots(date.value);
+}
+
+function toggleDatePicker() {
+  datePickerOpen.value = !datePickerOpen.value;
+}
+
+function closeDatePicker() {
+  datePickerOpen.value = false;
+}
+
+async function selectCalendarDate(isoDate: string) {
+  date.value = isoDate;
+  closeDatePicker();
+  await reload();
+}
+
+function shiftCalendarMonth(offset: number) {
+  const current = new Date(calendarCursor.value);
+  current.setMonth(current.getMonth() + offset);
+  calendarCursor.value = startOfMonth(current);
+}
+
+function handleOutsideDatePickerClick(event: MouseEvent) {
+  if (!datePickerOpen.value) return;
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (datePickerRef.value?.contains(target)) return;
+  closeDatePicker();
 }
 
 async function createCategory(payload: CreateCategoryRequest) {
@@ -198,6 +347,14 @@ async function deleteCategory(categoryId: number, categoryName: string) {
     : `分类已归档，${result.affectedRecords} 条历史记录将继续显示该分类。`;
 }
 
+function openCategoryManager() {
+  categoryManagerOpen.value = true;
+}
+
+function closeCategoryManager() {
+  categoryManagerOpen.value = false;
+}
+
 async function eraseSelection(slotIndexes: number[]) {
   const ids = slotIndexes
     .map((slotIndex) => timeSlotStore.slotsByIndex.get(slotIndex)?.id)
@@ -213,18 +370,31 @@ function clearSelection() {
 async function shiftDate(offset: number) {
   const current = new Date(`${date.value}T00:00:00`);
   current.setDate(current.getDate() + offset);
-  date.value = current.toISOString().slice(0, 10);
+  date.value = formatLocalDate(current);
+  closeDatePicker();
   await reload();
 }
 
 async function setToday() {
   date.value = todayIsoDate();
+  closeDatePicker();
   await reload();
 }
 
 async function logout() {
   auth.logout();
   await router.push('/login');
+}
+
+function formatLocalDate(value: Date) {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function startOfMonth(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), 1);
 }
 </script>
 
@@ -357,66 +527,196 @@ h1 {
 }
 
 .toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  display: block;
   margin-bottom: 18px;
 }
 
-.date-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+.date-strip {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 13px;
-  padding: 13px 14px;
+  padding: 10px 12px;
   color: #475569;
 }
 
-.date-card span {
+.date-summary {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.date-summary span {
   display: block;
   color: #94a3b8;
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
 }
 
-.date-card strong,
-.date-card small {
+.date-summary strong,
+.date-summary small {
   display: block;
 }
 
-.date-card strong {
+.date-summary strong {
   color: #0f172a;
   font-size: 15px;
 }
 
-.date-card small {
+.date-summary small {
   color: #64748b;
   font-size: 11px;
 }
 
-.date-card input {
-  max-width: 144px;
-  border: 1px solid #dbe3ef;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.86);
-  padding: 9px 10px;
-  color: #0f172a;
-}
-
 .date-actions {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
-.ghost-action,
+.date-icon-button,
+.today-button,
+.date-trigger,
+.calendar-nav,
+.calendar-day {
+  min-width: 38px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #475569;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.date-icon-button:hover,
+.today-button:hover,
+.date-trigger:hover,
+.calendar-nav:hover,
+.calendar-day:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.35);
+  background: #ffffff;
+  color: #3730a3;
+}
+
 .today-button {
-  min-height: 42px;
-  padding: 0 14px;
+  border-color: rgba(129, 140, 248, 0.32);
+  background: rgba(238, 242, 255, 0.84);
+  padding: 0 13px;
+  color: #4338ca;
   font-size: 12px;
+  font-weight: 900;
+}
+
+.date-picker-shell {
+  position: relative;
+}
+
+.date-trigger {
+  min-width: 124px;
+  gap: 8px;
+  padding: 0 12px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.date-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 120;
+  width: 294px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.18);
+  padding: 14px;
+}
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.calendar-head strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.calendar-nav {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 11px;
+  color: #475569;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.calendar-weekdays {
+  margin-bottom: 7px;
+}
+
+.calendar-weekdays span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.calendar-day {
+  min-width: 0;
+  min-height: 34px;
+  border-radius: 11px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-day.muted {
+  color: #94a3b8;
+  background: rgba(248, 250, 252, 0.62);
+}
+
+.calendar-day.today {
+  border-color: rgba(14, 165, 233, 0.34);
+  color: #0369a1;
+  background: #f0f9ff;
+}
+
+.calendar-day.selected {
+  border-color: rgba(79, 70, 229, 0.52);
+  background: #4f46e5;
+  color: #ffffff;
+  box-shadow: 0 12px 22px rgba(79, 70, 229, 0.22);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .notice,
@@ -451,6 +751,56 @@ h1 {
   gap: 18px;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(6px);
+}
+
+.category-dialog {
+  width: min(620px, 100%);
+  max-height: min(720px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+  padding: 20px;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.dialog-eyebrow {
+  margin: 0 0 5px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.dialog-close {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+}
+
 @media (max-width: 1100px) {
   .hero-grid,
   .workbench {
@@ -467,19 +817,29 @@ h1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .toolbar,
   .date-actions {
+    align-items: stretch;
+  }
+
+  .date-strip {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .date-card {
-    grid-template-columns: auto minmax(0, 1fr);
+  .date-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
-  .date-card input {
-    grid-column: 1 / -1;
-    max-width: none;
+  .date-picker-shell,
+  .date-trigger {
+    width: 100%;
+  }
+
+  .date-popover {
+    left: 0;
+    right: auto;
+    width: min(294px, calc(100vw - 28px));
   }
 }
 </style>
