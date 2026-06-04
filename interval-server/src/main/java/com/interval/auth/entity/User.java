@@ -3,6 +3,8 @@ package com.interval.auth.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.Instant;
+
 /**
  * 用户实体类
  * 
@@ -22,4 +24,24 @@ public class User {
     
     @Column(nullable = false, length = 100)
     private String passwordHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private AccountType accountType = AccountType.USER;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @Column(nullable = false)
+    private boolean mustChangePassword = false;
+
+    @Column(nullable = false)
+    private Instant createdAt = Instant.now();
+
+    private Instant lastLoginAt;
+
+    private Instant lastActiveAt;
+
+    private Instant passwordUpdatedAt;
 }

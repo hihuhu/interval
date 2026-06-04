@@ -1,6 +1,9 @@
 package com.interval.auth.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.interval.auth.entity.AccountType;
+import com.interval.auth.entity.User;
+import com.interval.auth.entity.UserStatus;
 import com.interval.auth.repository.UserRepository;
 import com.interval.auth.util.JwtUtil;
 import com.interval.common.dto.ApiResponse;
@@ -61,12 +64,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             Long userId = jwtUtil.getUserIdFromToken(token);
             String username = jwtUtil.getUsernameFromToken(token);
-            if (!userRepository.existsById(userId)) {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null) {
                 writeUnauthorized(response, "Authenticated user not found");
                 return;
             }
 
-            AuthenticatedUser principal = new AuthenticatedUser(userId, username);
+            if (user.getStatus() == UserStatus.DISABLED) {
+                writeForbidden(response, "Account is disabled");
+                return;
+            }
+
+            String path = pathWithoutContext(request);
+            if (user.isMustChangePassword() && !path.equals("/api/auth/change-password")) {
+                writeForbidden(response, "Password change required");
+                return;
+            }
+
+            if (!isRouteAllowed(path, user.getAccountType())) {
+                writeForbidden(response, "Access denied");
+                return;
+            }
+
+            AuthenticatedUser principal = new AuthenticatedUser(
+                userId,
+                username,
+                user.getAccountType(),
+                user.getStatus()
+            );
             UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(principal, null, List.of());
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -83,5 +108,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getWriter(), ApiResponse.error(message));
+    }
+
+    private void writeForbidden(HttpServletResponse response, String message) throws IOException {
+        SecurityContextHolder.clearContext();
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        objectMapper.writeValue(response.getWriter(), ApiResponse.error(message));
+    }
+
+    private boolean isRouteAllowed(String path, AccountType accountType) {
+        if (path.startsWith("/api/admin")) {
+            return accountType == AccountType.ADMIN;
+        }
+        if (path.startsWith("/api/categories")
+            || path.startsWith("/api/time-slots")
+            || path.startsWith("/api/stats")) {
+            return accountType == AccountType.USER;
+        }
+        return true;
+    }
+
+    private String pathWithoutContext(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (contextPath != null && !contextPath.isBlank() && path.startsWith(contextPath)) {
+            return path.substring(contextPath.length());
+        }
+        return path;
     }
 }

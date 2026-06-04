@@ -1,9 +1,11 @@
 package com.interval.stats.service;
 
+import com.interval.auth.service.UserActivityService;
 import com.interval.stats.dto.CategoryDurationStatDto;
 import com.interval.stats.dto.CategoryDurationStatRawDto;
 import com.interval.stats.dto.CategoryDurationSummaryDto;
 import com.interval.timeslot.repository.TimeSlotRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,9 +22,16 @@ public class StatsServiceImpl implements StatsService {
     private static final long MAX_RANGE_DAYS = 366L;
 
     private final TimeSlotRepository timeSlotRepository;
+    private final UserActivityService userActivityService;
 
     public StatsServiceImpl(TimeSlotRepository timeSlotRepository) {
+        this(timeSlotRepository, null);
+    }
+
+    @Autowired
+    public StatsServiceImpl(TimeSlotRepository timeSlotRepository, UserActivityService userActivityService) {
         this.timeSlotRepository = timeSlotRepository;
+        this.userActivityService = userActivityService;
     }
 
     @Override
@@ -40,7 +49,7 @@ public class StatsServiceImpl implements StatsService {
             .map(raw -> toStatDto(raw, totalRecordedMinutes))
             .toList();
 
-        return new CategoryDurationSummaryDto(
+        CategoryDurationSummaryDto summary = new CategoryDurationSummaryDto(
             startDate,
             endDate,
             totalSlotCount,
@@ -49,6 +58,10 @@ public class StatsServiceImpl implements StatsService {
             Math.max(totalAvailableMinutes - totalRecordedMinutes, 0L),
             categories
         );
+        if (userActivityService != null) {
+            userActivityService.markActive(userId);
+        }
+        return summary;
     }
 
     private void validateRange(LocalDate startDate, LocalDate endDate) {

@@ -10,6 +10,8 @@ export class ApiError extends Error {
 
 export const AUTH_TOKEN_KEY = 'interval.auth.token';
 export const AUTH_USERNAME_KEY = 'interval.auth.username';
+export const AUTH_ACCOUNT_TYPE_KEY = 'interval.auth.accountType';
+export const AUTH_MUST_CHANGE_PASSWORD_KEY = 'interval.auth.mustChangePassword';
 
 export const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -35,6 +37,8 @@ http.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.removeItem(AUTH_USERNAME_KEY);
+      localStorage.removeItem(AUTH_ACCOUNT_TYPE_KEY);
+      localStorage.removeItem(AUTH_MUST_CHANGE_PASSWORD_KEY);
       if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
         window.location.assign('/login');
       }

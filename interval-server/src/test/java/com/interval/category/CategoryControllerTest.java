@@ -3,6 +3,9 @@ package com.interval.category;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.interval.auth.config.SecurityConfig;
+import com.interval.auth.entity.AccountType;
+import com.interval.auth.entity.User;
+import com.interval.auth.entity.UserStatus;
 import com.interval.auth.repository.UserRepository;
 import com.interval.auth.util.JwtUtil;
 import com.interval.category.dto.DeleteCategoryResponseDto;
@@ -23,6 +26,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.Optional;
 
 @WebMvcTest(com.interval.category.controller.CategoryController.class)
 @Import(SecurityConfig.class)
@@ -56,7 +61,7 @@ class CategoryControllerTest {
         when(jwtUtil.validateToken(token)).thenReturn(true);
         when(jwtUtil.getUserIdFromToken(token)).thenReturn(userId);
         when(jwtUtil.getUsernameFromToken(token)).thenReturn("alex");
-        when(userRepository.existsById(userId)).thenReturn(true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId, "alex")));
 
         String responseBody = mockMvc.perform(delete("/api/categories/{categoryId}", categoryId)
                 .header("Authorization", "Bearer " + token)
@@ -73,5 +78,15 @@ class CategoryControllerTest {
         assertThat(response.get("data").isNull()).isFalse();
         assertThat(response.get("data").get("affectedRecords").asLong()).isEqualTo(3L);
         verify(categoryService).deleteCategory(userId, categoryId);
+    }
+
+    private User activeUser(Long userId, String username) {
+        User user = new User();
+        user.setId(userId);
+        user.setUsername(username);
+        user.setPasswordHash("hashed-password");
+        user.setAccountType(AccountType.USER);
+        user.setStatus(UserStatus.ACTIVE);
+        return user;
     }
 }

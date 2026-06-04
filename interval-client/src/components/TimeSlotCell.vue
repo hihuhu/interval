@@ -103,6 +103,8 @@ function uniqueText(values: Array<string | null | undefined>) {
   --empty-slot-surface: rgba(255, 255, 255, 0.46);
   --empty-slot-surface-hover: rgba(255, 255, 255, 0.72);
   position: relative;
+  contain: paint;
+  content-visibility: auto;
   height: 42px;
   min-height: 42px;
   border: 1px solid rgba(148, 163, 184, 0.20);
@@ -119,18 +121,7 @@ function uniqueText(values: Array<string | null | undefined>) {
   overflow: hidden;
   user-select: none;
   touch-action: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
-  transition: background-color .14s ease, border-color .14s ease, box-shadow .14s ease, color .14s ease;
-}
-
-.slot-cell::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 11px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.32), transparent 58%);
-  opacity: 0.82;
-  pointer-events: none;
+  transition: background-color .14s ease, border-color .14s ease, color .14s ease;
 }
 
 .slot-cell:hover {
@@ -138,9 +129,6 @@ function uniqueText(values: Array<string | null | undefined>) {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.60), rgba(255, 255, 255, 0.22)),
     var(--empty-slot-surface-hover);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.42),
-    inset 0 0 0 2px rgba(99, 102, 241, 0.08);
 }
 
 .occupied {
@@ -150,9 +138,6 @@ function uniqueText(values: Array<string | null | undefined>) {
     linear-gradient(90deg, var(--slot-surface-strong, #c7d2fe) 0 5px, transparent 5px),
     var(--slot-surface, #eef2ff);
   color: var(--slot-text-color, #1e293b);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.30),
-    0 1px 2px rgba(15, 23, 42, 0.025);
 }
 
 .selected {
@@ -161,10 +146,9 @@ function uniqueText(values: Array<string | null | undefined>) {
   background:
     linear-gradient(180deg, rgba(238, 242, 255, 0.86), rgba(224, 231, 255, 0.80)),
     #e0e7ff;
-  box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.42) inset,
-    0 1px 0 rgba(255, 255, 255, 0.74) inset;
   color: #312e81;
+  outline: 2px solid rgba(79, 70, 229, 0.42);
+  outline-offset: -2px;
 }
 
 .slot-cell.selected:hover {
@@ -172,9 +156,7 @@ function uniqueText(values: Array<string | null | undefined>) {
   background:
     linear-gradient(180deg, rgba(238, 242, 255, 0.94), rgba(224, 231, 255, 0.88)),
     #e0e7ff;
-  box-shadow:
-    0 0 0 2px rgba(67, 56, 202, 0.56) inset,
-    0 0 0 1px rgba(67, 56, 202, 0.18);
+  outline-color: rgba(67, 56, 202, 0.56);
   color: #312e81;
 }
 
@@ -184,18 +166,8 @@ function uniqueText(values: Array<string | null | undefined>) {
   background:
     linear-gradient(180deg, rgba(240, 249, 255, 0.86), rgba(224, 242, 254, 0.72)),
     #e0f2fe;
-  box-shadow:
-    0 0 0 2px rgba(14, 165, 233, 0.20) inset,
-    0 0 0 1px rgba(14, 165, 233, 0.10);
-}
-
-.preview::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 11px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(125, 211, 252, 0.18));
-  pointer-events: none;
+  outline: 2px solid rgba(14, 165, 233, 0.20);
+  outline-offset: -2px;
 }
 
 .slot-cell > * {
@@ -212,6 +184,5 @@ function uniqueText(values: Array<string | null | undefined>) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.46);
 }
 </style>

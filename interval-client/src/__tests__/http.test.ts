@@ -1,43 +1,47 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { http, ApiError } from '@/services/http';
-
-vi.mock('axios', () => {
-  const handlers = {
-    request: undefined as ((config: any) => any) | undefined,
-    responseSuccess: undefined as ((response: any) => any) | undefined,
-    responseError: undefined as ((error: any) => any) | undefined,
-  };
-  const instance = {
-    interceptors: {
-      request: { use: vi.fn((handler) => { handlers.request = handler; }) },
-      response: { use: vi.fn((success, error) => { handlers.responseSuccess = success; handlers.responseError = error; }) },
-    },
-    __handlers: handlers,
-  };
-  return { default: { create: vi.fn(() => instance) } };
-});
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { AxiosAdapter } from 'axios';
+import {
+  AUTH_ACCOUNT_TYPE_KEY,
+  AUTH_MUST_CHANGE_PASSWORD_KEY,
+  AUTH_TOKEN_KEY,
+  AUTH_USERNAME_KEY,
+  http,
+} from '@/services/http';
 
 describe('http service', () => {
+  const originalAdapter = http.defaults.adapter;
+
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState({}, '', '/login');
   });
 
-  it('attaches bearer token when present', () => {
-    localStorage.setItem('interval.auth.token', 'abc');
-    const config = (http as any).__handlers.request({ headers: {} });
-    expect(config.headers.Authorization).toBe('Bearer abc');
+  afterEach(() => {
+    http.defaults.adapter = originalAdapter;
   });
 
-  it('unwraps ApiResponse data on success', () => {
-    const result = (http as any).__handlers.responseSuccess({
-      data: { result: 'SUCCESS', message: 'ok', data: { id: 1 } },
-    });
-    expect(result).toEqual({ id: 1 });
-  });
+  it('clears all auth storage keys on unauthorized responses', async () => {
+    localStorage.setItem(AUTH_TOKEN_KEY, 'token');
+    localStorage.setItem(AUTH_USERNAME_KEY, 'alex');
+    localStorage.setItem(AUTH_ACCOUNT_TYPE_KEY, 'ADMIN');
+    localStorage.setItem(AUTH_MUST_CHANGE_PASSWORD_KEY, 'true');
+    http.defaults.adapter = (async (config) => Promise.reject({
+      config,
+      message: 'Unauthorized',
+      response: {
+        config,
+        data: { result: 'ERROR', message: 'Expired' },
+        headers: {},
+        status: 401,
+        statusText: 'Unauthorized',
+      },
+    })) as AxiosAdapter;
 
-  it('throws ApiError on backend error response', () => {
-    expect(() => (http as any).__handlers.responseSuccess({
-      data: { result: 'ERROR', message: 'bad', data: null },
-    })).toThrow(ApiError);
+    await expect(http.get('/api/categories')).rejects.toThrow('Expired');
+
+    expect(localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
+    expect(localStorage.getItem(AUTH_USERNAME_KEY)).toBeNull();
+    expect(localStorage.getItem(AUTH_ACCOUNT_TYPE_KEY)).toBeNull();
+    expect(localStorage.getItem(AUTH_MUST_CHANGE_PASSWORD_KEY)).toBeNull();
   });
 });

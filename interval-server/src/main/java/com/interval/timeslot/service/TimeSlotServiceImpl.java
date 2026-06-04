@@ -1,5 +1,6 @@
 package com.interval.timeslot.service;
 
+import com.interval.auth.service.UserActivityService;
 import com.interval.category.entity.Category;
 import com.interval.category.entity.CategoryStatus;
 import com.interval.category.repository.CategoryRepository;
@@ -30,6 +31,9 @@ public class TimeSlotServiceImpl implements TimeSlotService {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired(required = false)
+    private UserActivityService userActivityService;
 
     @Override
     public List<TimeSlotDto> getDailySlots(Long userId, LocalDate date) {
@@ -64,6 +68,7 @@ public class TimeSlotServiceImpl implements TimeSlotService {
         slot.setUpdatedAt(now);
 
         TimeSlot saved = timeSlotRepository.save(slot);
+        markActive(userId);
         return toDto(saved);
     }
 
@@ -102,6 +107,7 @@ public class TimeSlotServiceImpl implements TimeSlotService {
             .stream()
             .map(this::toDto)
             .toList();
+        markActive(userId);
         return new BatchUpsertTimeSlotResponseDto(saved.size(), saved);
     }
 
@@ -112,6 +118,7 @@ public class TimeSlotServiceImpl implements TimeSlotService {
             .orElseThrow(() -> new IllegalArgumentException("Time slot not found"));
 
         timeSlotRepository.delete(slot);
+        markActive(userId);
         return new DeleteTimeSlotResponseDto(true, slotId);
     }
 
@@ -121,6 +128,7 @@ public class TimeSlotServiceImpl implements TimeSlotService {
         List<TimeSlot> slots = timeSlotRepository.findByUserIdAndIdIn(userId, request.slotIds());
         timeSlotRepository.deleteAll(slots);
         List<Long> deletedIds = slots.stream().map(TimeSlot::getId).toList();
+        markActive(userId);
         return new BatchDeleteTimeSlotResponseDto(deletedIds.size(), deletedIds);
     }
 
@@ -169,5 +177,11 @@ public class TimeSlotServiceImpl implements TimeSlotService {
             categoryStatus,
             categoryDisplayName
         );
+    }
+
+    private void markActive(Long userId) {
+        if (userActivityService != null) {
+            userActivityService.markActive(userId);
+        }
     }
 }

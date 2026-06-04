@@ -60,13 +60,30 @@ describe('TimeGrid', () => {
     expect(timeGridSource).toContain('--time-board-surface');
     expect(timeSlotCellSource).not.toContain('background: #ffffff;');
     expect(timeSlotCellSource).toContain('--empty-slot-surface');
-    expect(timeSlotCellSource).toContain('::before');
+    expect(timeSlotCellSource).toContain('outline-offset: -2px;');
+  });
+
+  it('keeps the grid body in a focused scroll region with quick scroll controls', () => {
+    const wrapper = mount(TimeGrid, { props: { slots: [] } });
+
+    expect(wrapper.find('[data-testid="jump-to-now"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="jump-to-top"]').exists()).toBe(true);
+    expect(wrapper.find('.time-board-scroll').attributes('tabindex')).toBe('0');
+    expect(timeGridSource).toContain('overscroll-behavior: contain;');
+    expect(timeGridSource).toContain('scrollbar-gutter: stable;');
   });
 
   it('keeps selected cells visually selected on hover with lighter motion costs', () => {
     expect(timeSlotCellSource).toContain('.slot-cell.selected:hover');
     expect(timeSlotCellSource).not.toContain('transform: translateY(-1px);');
     expect(timeSlotCellSource).not.toContain('transition: box-shadow .16s ease, border-color .16s ease, background .16s ease, transform .16s ease;');
+  });
+
+  it('keeps slot cell painting light enough for smooth scrolling', () => {
+    expect(timeSlotCellSource).not.toContain('.slot-cell::before');
+    expect(timeSlotCellSource).not.toContain('box-shadow:');
+    expect(timeSlotCellSource).toContain('contain: paint;');
+    expect(timeSlotCellSource).toContain('content-visibility: auto;');
   });
 
   it('emits selectionChange when clicked slots are toggled', async () => {

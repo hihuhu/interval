@@ -10,30 +10,89 @@
       </div>
 
       <div class="surface-card hero-aside">
-        <div class="range-tabs" aria-label="统计范围">
-          <button
-            v-for="option in rangeOptions"
-            :key="option.key"
-            type="button"
-            :class="{ active: activeRange === option.key }"
-            :data-testid="`range-${option.key}`"
-            @click="selectQuickRange(option.key)"
-          >
-            {{ option.label }}
-          </button>
-        </div>
+        <div class="range-control-card">
+          <div class="range-tabs" aria-label="统计范围">
+            <button
+              v-for="option in rangeOptions"
+              :key="option.key"
+              type="button"
+              :class="{ active: activeRange === option.key }"
+              :data-testid="`range-${option.key}`"
+              @click="selectQuickRange(option.key)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
 
-        <form class="custom-range" @submit.prevent="applyCustomRange">
-          <label>
-            <span>开始</span>
-            <input v-model="customStartDate" type="date" />
-          </label>
-          <label>
-            <span>结束</span>
-            <input v-model="customEndDate" type="date" />
-          </label>
-          <button type="submit" class="ghost-action">应用</button>
-        </form>
+          <form class="custom-range" @submit.prevent="applyCustomRange">
+            <div class="stats-date-picker-shell" ref="datePickerRef">
+              <div class="date-field">
+                <span>开始</span>
+                <button
+                  type="button"
+                  class="date-trigger"
+                  data-testid="stats-start-date-trigger"
+                  aria-haspopup="dialog"
+                  :aria-expanded="datePickerOpen && activeDateField === 'start'"
+                  @click="toggleDatePicker('start')"
+                >
+                  <CalendarDays :size="14" />
+                  {{ formatDateTrigger(customStartDate) }}
+                </button>
+              </div>
+              <div class="date-field">
+                <span>结束</span>
+                <button
+                  type="button"
+                  class="date-trigger"
+                  data-testid="stats-end-date-trigger"
+                  aria-haspopup="dialog"
+                  :aria-expanded="datePickerOpen && activeDateField === 'end'"
+                  @click="toggleDatePicker('end')"
+                >
+                  <CalendarDays :size="14" />
+                  {{ formatDateTrigger(customEndDate) }}
+                </button>
+              </div>
+
+              <div
+                v-if="datePickerOpen"
+                class="date-popover"
+                data-testid="stats-date-popover"
+                role="dialog"
+                aria-label="选择统计日期"
+              >
+                <div class="calendar-head">
+                  <button type="button" class="calendar-nav" aria-label="上个月" @click="shiftCalendarMonth(-1)">
+                    <ChevronLeft :size="15" />
+                  </button>
+                  <strong>{{ calendarMonthLabel }}</strong>
+                  <button type="button" class="calendar-nav" aria-label="下个月" @click="shiftCalendarMonth(1)">
+                    <ChevronRight :size="15" />
+                  </button>
+                </div>
+                <div class="calendar-weekdays" aria-hidden="true">
+                  <span v-for="weekday in calendarWeekdays" :key="weekday">{{ weekday }}</span>
+                </div>
+                <div class="calendar-grid">
+                  <button
+                    v-for="day in calendarDays"
+                    :key="day.key"
+                    type="button"
+                    class="calendar-day"
+                    :class="{ muted: !day.inCurrentMonth, selected: day.isoDate === activeDateValue, today: day.isoDate === todayIso }"
+                    :aria-label="day.ariaLabel"
+                    :aria-pressed="day.isoDate === activeDateValue"
+                    @click="selectCalendarDate(day.isoDate)"
+                  >
+                    {{ day.dayNumber }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="ghost-action">应用</button>
+          </form>
+        </div>
 
         <div class="insight">
           <strong>本次范围洞察</strong>
@@ -181,20 +240,15 @@
           </div>
         </div>
 
-        <div class="next-panel">
-          <small>下一步可扩展</small>
-          <h3>日报 / 周报 / 月报</h3>
-          <p>当前版本先完成分类耗时闭环；后续可以继续扩展活动名称排行、导出和跨范围对比。</p>
-        </div>
       </aside>
     </section>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Clock3 } from '@lucide/vue';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3 } from '@lucide/vue';
 import AppLayout from '@/components/AppLayout.vue';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useStatsStore } from '@/stores/useStatsStore';
@@ -212,6 +266,12 @@ const endDate = ref(toIsoDate(endOfWeek(today)));
 const customStartDate = ref(startDate.value);
 const customEndDate = ref(endDate.value);
 const selectedCategoryId = ref<number | null>(null);
+type StatsDateField = 'start' | 'end';
+const activeDateField = ref<StatsDateField>('start');
+const datePickerOpen = ref(false);
+const datePickerRef = ref<HTMLElement | null>(null);
+const calendarCursor = ref(startOfMonth(today));
+const calendarWeekdays = ['一', '二', '三', '四', '五', '六', '日'];
 
 const rangeOptions: Array<{ key: StatsRangeKey; label: string }> = [
   { key: 'today', label: '今日' },
@@ -245,6 +305,35 @@ const averageMinutesPerDay = computed(() => {
 });
 const legendCategories = computed(() => (summary.value?.categories ?? []).slice(0, 6));
 const donutStyle = computed(() => ({ '--segments': buildDonutSegments(summary.value?.categories ?? []) }));
+const activeDateValue = computed(() => activeDateField.value === 'start' ? customStartDate.value : customEndDate.value);
+const calendarMonthLabel = computed(() => calendarCursor.value.toLocaleDateString('zh-CN', {
+  year: 'numeric',
+  month: 'long',
+}));
+const calendarDays = computed(() => {
+  const firstDay = startOfMonth(calendarCursor.value);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const gridStart = new Date(firstDay);
+  gridStart.setDate(firstDay.getDate() - startOffset);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(gridStart);
+    day.setDate(gridStart.getDate() + index);
+    const isoDate = toIsoDate(day);
+    return {
+      key: isoDate,
+      isoDate,
+      dayNumber: day.getDate(),
+      inCurrentMonth: day.getMonth() === calendarCursor.value.getMonth(),
+      ariaLabel: day.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long',
+      }),
+    };
+  });
+});
 const insightText = computed(() => {
   const topCategory = summary.value?.categories[0];
   if (!topCategory) return '当前范围暂无足够数据。完成时间格登记后，这里会显示投入最多的分类。';
@@ -259,7 +348,12 @@ watch(summary, (nextSummary) => {
 });
 
 onMounted(() => {
+  document.addEventListener('click', handleOutsideDatePickerClick);
   void fetchStats();
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleOutsideDatePickerClick);
 });
 
 async function selectQuickRange(range: StatsRangeKey) {
@@ -269,6 +363,8 @@ async function selectQuickRange(range: StatsRangeKey) {
   endDate.value = selected.endDate;
   customStartDate.value = selected.startDate;
   customEndDate.value = selected.endDate;
+  calendarCursor.value = startOfMonth(new Date(`${selected.startDate}T00:00:00`));
+  closeDatePicker();
   await fetchStats();
 }
 
@@ -276,6 +372,7 @@ async function applyCustomRange() {
   activeRange.value = 'custom';
   startDate.value = customStartDate.value;
   endDate.value = customEndDate.value;
+  closeDatePicker();
   await fetchStats();
 }
 
@@ -302,6 +399,51 @@ function calculateRange(range: StatsRangeKey) {
     return { startDate: customStartDate.value, endDate: customEndDate.value };
   }
   return { startDate: toIsoDate(startOfWeek(today)), endDate: toIsoDate(endOfWeek(today)) };
+}
+
+function toggleDatePicker(field: StatsDateField) {
+  const alreadyOpen = datePickerOpen.value && activeDateField.value === field;
+  activeDateField.value = field;
+  calendarCursor.value = startOfMonth(new Date(`${activeDateValue.value}T00:00:00`));
+  datePickerOpen.value = !alreadyOpen;
+}
+
+function closeDatePicker() {
+  datePickerOpen.value = false;
+}
+
+function selectCalendarDate(isoDate: string) {
+  if (activeDateField.value === 'start') {
+    customStartDate.value = isoDate;
+    if (customEndDate.value < isoDate) customEndDate.value = isoDate;
+  } else {
+    customEndDate.value = isoDate;
+    if (customStartDate.value > isoDate) customStartDate.value = isoDate;
+  }
+  activeRange.value = 'custom';
+  closeDatePicker();
+}
+
+function shiftCalendarMonth(offset: number) {
+  const current = new Date(calendarCursor.value);
+  current.setMonth(current.getMonth() + offset);
+  calendarCursor.value = startOfMonth(current);
+}
+
+function handleOutsideDatePickerClick(event: MouseEvent) {
+  if (!datePickerOpen.value) return;
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (datePickerRef.value?.contains(target)) return;
+  closeDatePicker();
+}
+
+function formatDateTrigger(value: string) {
+  return new Date(`${value}T00:00:00`).toLocaleDateString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+  });
 }
 
 function durationText(minutes: number) {
@@ -453,7 +595,6 @@ h1 {
 .panel-title p,
 .summary-top p,
 .empty-state p,
-.next-panel p,
 .insight p {
   margin: 0;
   color: #64748b;
@@ -472,25 +613,42 @@ h1 {
   padding: 22px;
 }
 
+.range-control-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 20px;
+  background: rgba(248, 250, 252, 0.72);
+  padding: 12px;
+}
+
 .range-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 6px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 5px;
 }
 
 .range-tabs button {
-  min-height: 42px;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.82);
+  flex: 1 1 78px;
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
   color: #64748b;
-  padding: 0 16px;
+  padding: 0 12px;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
 }
 
-.range-tabs button:hover {
+.range-tabs button:hover,
+.range-tabs button:focus-visible {
+  outline: none;
+  background: #f8fafc;
   border-color: rgba(129, 140, 248, 0.35);
   color: #4338ca;
 }
@@ -504,32 +662,160 @@ h1 {
 
 .custom-range {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
   align-items: end;
 }
 
-.custom-range label span {
+.stats-date-picker-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.date-field {
   display: block;
-  margin-bottom: 6px;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 8px 10px 9px;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.date-field:focus-within,
+.date-field:has(.date-trigger[aria-expanded="true"]) {
+  border-color: rgba(99, 102, 241, 0.58);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.10);
+}
+
+.date-field span {
+  display: block;
+  margin-bottom: 4px;
   color: #94a3b8;
   font-size: 11px;
   font-weight: 900;
 }
 
-.custom-range input {
+.date-trigger {
   width: 100%;
-  min-height: 40px;
-  border: 1px solid #dbe3ef;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.86);
+  min-height: 24px;
+  border: 0;
+  outline: none;
+  background: transparent;
   color: #0f172a;
-  padding: 8px 10px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  cursor: pointer;
 }
 
-.custom-range button {
-  min-height: 40px;
+.date-trigger svg {
+  color: #6366f1;
+  flex: 0 0 auto;
+}
+
+.custom-range > .ghost-action {
+  min-height: 58px;
   padding: 0 14px;
+}
+
+.date-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 120;
+  width: 294px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.18);
+  padding: 14px;
+}
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.calendar-head strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.calendar-nav,
+.calendar-day {
+  min-width: 34px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #475569;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.calendar-nav:hover,
+.calendar-day:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.35);
+  background: #ffffff;
+  color: #3730a3;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.calendar-weekdays {
+  margin-bottom: 7px;
+}
+
+.calendar-weekdays span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.calendar-day {
+  min-width: 0;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-day.muted {
+  color: #94a3b8;
+  background: rgba(248, 250, 252, 0.62);
+}
+
+.calendar-day.today {
+  border-color: rgba(14, 165, 233, 0.34);
+  color: #0369a1;
+  background: #f0f9ff;
+}
+
+.calendar-day.selected {
+  border-color: rgba(79, 70, 229, 0.52);
+  background: #4f46e5;
+  color: #ffffff;
+  box-shadow: 0 12px 22px rgba(79, 70, 229, 0.22);
 }
 
 .insight {
@@ -954,29 +1240,6 @@ h2 {
   font-size: 11px;
 }
 
-.next-panel {
-  border-radius: 24px;
-  background: linear-gradient(135deg, #4f46e5, #4338ca);
-  color: white;
-  box-shadow: 0 20px 34px rgba(79, 70, 229, 0.22);
-  padding: 20px;
-}
-
-.next-panel small {
-  color: #c7d2fe;
-  font-weight: 900;
-  letter-spacing: 0.05em;
-}
-
-.next-panel h3 {
-  margin: 10px 0 8px;
-}
-
-.next-panel p {
-  color: #e0e7ff;
-  font-size: 12px;
-}
-
 .error {
   border: 1px solid #fecaca;
   border-radius: 14px;
@@ -1014,6 +1277,16 @@ h2 {
 
   .custom-range {
     grid-template-columns: 1fr;
+  }
+
+  .stats-date-picker-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .date-popover {
+    left: 0;
+    right: auto;
+    width: min(294px, calc(100vw - 28px));
   }
 }
 

@@ -8,16 +8,27 @@
             <span>Interval</span>
           </div>
           <nav aria-label="主导航">
-            <RouterLink class="nav-chip" :class="{ active: activeRoute === 'timeGrid' }" to="/time-grid">时间格</RouterLink>
-            <RouterLink class="nav-chip" :class="{ active: activeRoute === 'stats' }" to="/stats">统计</RouterLink>
+            <template v-if="accountType === 'ADMIN'">
+              <RouterLink class="nav-chip" :class="{ active: activeRoute === 'admin' }" to="/admin">管理</RouterLink>
+            </template>
+            <template v-else>
+              <RouterLink class="nav-chip" :class="{ active: activeRoute === 'timeGrid' }" to="/time-grid">时间格</RouterLink>
+              <RouterLink class="nav-chip" :class="{ active: activeRoute === 'stats' }" to="/stats">统计</RouterLink>
+            </template>
           </nav>
         </div>
-        <div class="header-actions">
-          <span class="username">{{ username }}</span>
-          <button type="button" class="logout-button" @click="$emit('logout')">
-            <LogOut :size="15" />
-            退出
+        <div class="user-menu">
+          <button type="button" class="user-trigger" @click="menuOpen = !menuOpen">
+            <span>{{ username }}</span>
+            <ChevronDown :size="15" />
           </button>
+          <div v-if="menuOpen" class="dropdown">
+            <p class="dropdown-note">{{ accountType === 'ADMIN' ? '管理员账号' : '普通用户账号' }}</p>
+            <button type="button" class="logout-menu-item" @click="$emit('logout')">
+              <LogOut :size="15" />
+              退出登录
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -28,17 +39,22 @@
 </template>
 
 <script setup lang="ts">
-import { LogOut } from '@lucide/vue';
+import { ref } from 'vue';
+import { ChevronDown, LogOut } from '@lucide/vue';
 
 interface AppLayoutProps {
   username: string;
-  activeRoute?: 'timeGrid' | 'stats';
+  activeRoute?: 'timeGrid' | 'stats' | 'admin';
+  accountType?: 'USER' | 'ADMIN';
 }
 
 withDefaults(defineProps<AppLayoutProps>(), {
   activeRoute: 'timeGrid',
+  accountType: 'USER',
 });
 defineEmits<{ (e: 'logout'): void }>();
+
+const menuOpen = ref(false);
 </script>
 
 <style scoped>
@@ -96,7 +112,6 @@ defineEmits<{ (e: 'logout'): void }>();
 }
 
 .brand-zone,
-.header-actions,
 .brand-mark,
 nav {
   display: flex;
@@ -143,29 +158,64 @@ nav {
   border-color: rgba(129, 140, 248, 0.35);
 }
 
-.header-actions {
-  gap: 12px;
+.user-menu {
+  position: relative;
 }
 
-.username {
-  color: #475569;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.logout-button {
+.user-trigger {
   min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   border: 1px solid rgba(203, 213, 225, 0.8);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.75);
   color: #475569;
-  padding: 0 12px;
+  padding: 0 10px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
   font-size: 12px;
   font-weight: 800;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 44px;
+  width: 180px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.14);
+  padding: 8px;
+}
+
+.dropdown-note {
+  margin: 0;
+  padding: 8px 10px 10px;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.logout-menu-item {
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.logout-menu-item:hover {
+  background: #f8fafc;
+  color: #4338ca;
 }
 
 main {

@@ -9,6 +9,8 @@
       <div class="grid-actions" aria-label="时间网格操作提示">
         <span>拖拽：连续范围</span>
         <span>单击：补选 / 取消</span>
+        <button type="button" data-testid="jump-to-now" @click="scrollToCurrentSlot">当前时段</button>
+        <button type="button" data-testid="jump-to-top" @click="scrollToTop">顶部</button>
       </div>
     </div>
 
@@ -27,7 +29,7 @@
         <div>:30</div>
         <div>:45</div>
       </div>
-      <div class="time-board-scroll">
+      <div ref="scrollContainer" class="time-board-scroll" tabindex="0" aria-label="全天 96 个时间块滚动区域">
         <div v-for="hour in 24" :key="hour" class="time-row">
           <div class="hour-label">{{ hourLabel(hour - 1) }}</div>
           <TimeSlotCell
@@ -50,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import TimeSlotCell from '@/components/TimeSlotCell.vue';
 import { useSlotSelection } from '@/composables/useSlotSelection';
 import type { TimeSlotDto } from '@/types/timeSlot';
@@ -77,6 +79,7 @@ const {
 } = useSlotSelection();
 const slotsByIndex = computed(() => new Map(props.slots.map((slot) => [slot.slotIndex, slot])));
 const renderedSelectedSlotIndexes = computed(() => props.selectedSlotIndexes ?? selectedSlotIndexes.value);
+const scrollContainer = ref<HTMLElement | null>(null);
 let pointerInputSeen = false;
 
 watch(
@@ -170,6 +173,25 @@ function slotIndexFor(hour: number, quarter: number): number {
 function hourLabel(hour: number): string {
   return `${hour.toString().padStart(2, '0')}:00`;
 }
+
+function scrollToCurrentSlot() {
+  const now = new Date();
+  const slotIndex = Math.min(Math.floor(((now.getHours() * 60) + now.getMinutes()) / 15), 95);
+  scrollToSlot(slotIndex);
+}
+
+function scrollToTop() {
+  scrollContainer.value?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function scrollToSlot(slotIndex: number) {
+  const container = scrollContainer.value;
+  const target = container?.querySelector<HTMLElement>(`[data-slot-index="${slotIndex}"]`);
+  if (!container || !target) return;
+
+  const top = target.offsetTop - container.clientHeight * 0.35;
+  container.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+}
 </script>
 
 <style scoped>
@@ -215,9 +237,11 @@ h2 {
   gap: 8px;
 }
 
-.grid-actions span {
+.grid-actions span,
+.grid-actions button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 34px;
   padding: 0 12px;
   border: 1px solid rgba(203, 213, 225, 0.72);
@@ -226,6 +250,19 @@ h2 {
   color: #475569;
   font-size: 12px;
   font-weight: 800;
+}
+
+.grid-actions button {
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.grid-actions button:hover,
+.grid-actions button:focus-visible {
+  outline: none;
+  border-color: rgba(99, 102, 241, 0.34);
+  background: rgba(238, 242, 255, 0.88);
+  color: #4338ca;
 }
 
 .time-board {
@@ -262,6 +299,15 @@ h2 {
   max-height: 640px;
   overflow-y: auto;
   padding-right: 4px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+  border-radius: 14px;
+}
+
+.time-board-scroll:focus-visible {
+  outline: 3px solid rgba(99, 102, 241, 0.22);
+  outline-offset: 4px;
 }
 
 .time-row {

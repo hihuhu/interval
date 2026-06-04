@@ -35,7 +35,10 @@
         </button>
       </form>
 
-      <RouterLink class="register-link" to="/register">还没有账号？注册</RouterLink>
+      <div class="auth-links">
+        <RouterLink class="register-link" to="/forgot-password">忘记密码</RouterLink>
+        <RouterLink class="register-link" to="/register">还没有账号？注册</RouterLink>
+      </div>
     </section>
   </main>
 </template>
@@ -54,6 +57,14 @@ const password = ref('');
 
 async function submit() {
   await auth.login(username.value, password.value);
+  if (auth.mustChangePassword) {
+    await router.push('/change-password');
+    return;
+  }
+  if (auth.accountType === 'ADMIN') {
+    await router.push('/admin');
+    return;
+  }
   await router.push(typeof route.query.redirect === 'string' ? route.query.redirect : '/time-grid');
 }
 </script>
@@ -140,15 +151,16 @@ input {
   font-size: 12px;
 }
 
-.register-link {
+.auth-links {
   margin: 0;
+  display: grid;
+  gap: 8px;
   text-align: center;
-  color: #64748b;
-  font-size: 12px;
 }
 
 .register-link {
   color: #4f46e5;
+  font-size: 12px;
   font-weight: 800;
   text-decoration: none;
 }

@@ -1,4 +1,12 @@
 package com.interval.auth.security;
 
-public record AuthenticatedUser(Long userId, String username) {
+import com.interval.auth.entity.AccountType;
+import com.interval.auth.entity.UserStatus;
+
+public record AuthenticatedUser(
+    Long userId,
+    String username,
+    AccountType accountType,
+    UserStatus status
+) {
 }

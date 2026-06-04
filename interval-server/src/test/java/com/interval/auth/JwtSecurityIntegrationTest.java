@@ -2,6 +2,8 @@ package com.interval.auth;
 
 import com.interval.auth.entity.User;
 import com.interval.auth.config.SeedDataInitializer;
+import com.interval.auth.entity.AccountType;
+import com.interval.auth.entity.UserStatus;
 import com.interval.auth.repository.UserRepository;
 import com.interval.auth.util.JwtUtil;
 import com.interval.category.repository.CategoryRepository;
@@ -56,6 +58,8 @@ class JwtSecurityIntegrationTest {
         user = new User();
         user.setUsername("jwtuser");
         user.setPasswordHash("hashed-password");
+        user.setAccountType(AccountType.USER);
+        user.setStatus(UserStatus.ACTIVE);
         user = userRepository.save(user);
     }
 
@@ -119,10 +123,12 @@ class JwtSecurityIntegrationTest {
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"admin\",\"password\":\"123ABCdef*\"}"))
+                .content("{\"username\":\"admin\",\"password\":\"123456\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.result").value("SUCCESS"))
             .andExpect(jsonPath("$.data.username").value("admin"))
+            .andExpect(jsonPath("$.data.accountType").value("ADMIN"))
+            .andExpect(jsonPath("$.data.mustChangePassword").value(true))
             .andExpect(jsonPath("$.data.token").isNotEmpty());
     }
 }

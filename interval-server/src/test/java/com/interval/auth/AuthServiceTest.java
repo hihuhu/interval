@@ -2,7 +2,9 @@ package com.interval.auth;
 
 import com.interval.auth.dto.LoginResponseDto;
 import com.interval.auth.dto.RegisterResponseDto;
+import com.interval.auth.entity.AccountType;
 import com.interval.auth.entity.User;
+import com.interval.auth.entity.UserStatus;
 import com.interval.auth.exception.AuthenticationFailedException;
 import com.interval.auth.exception.PasswordValidationException;
 import com.interval.auth.exception.UserAlreadyExistsException;
@@ -19,6 +21,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,6 +73,9 @@ public class AuthServiceTest {
         testUser.setId(1L);
         testUser.setUsername(testUsername);
         testUser.setPasswordHash(testPasswordHash);
+        testUser.setAccountType(AccountType.USER);
+        testUser.setStatus(UserStatus.ACTIVE);
+        testUser.setMustChangePassword(false);
     }
 
     /**
@@ -102,6 +109,8 @@ public class AuthServiceTest {
         assertNotNull(response.token(), "JWT token 不应为空");
         assertEquals(testToken, response.token(), "返回的 token 应与生成的 token 一致");
         assertEquals(testUsername, response.username(), "返回的用户名应正确");
+        assertEquals("USER", response.accountType(), "登录响应应返回账号类型");
+        assertFalse(response.mustChangePassword(), "登录响应应返回是否需要强制改密");
         
         // 验证 JWT token 格式（三段式，用 . 分隔）
         String[] tokenParts = response.token().split("\\.");
@@ -111,6 +120,48 @@ public class AuthServiceTest {
         verify(userRepository, times(1)).findByUsername(testUsername);
         verify(passwordEncoder, times(1)).matches(testPassword, testPasswordHash);
         verify(jwtUtil, times(1)).generateToken(testUser.getId(), testUsername);
+        verify(userRepository, times(1)).save(argThat(user ->
+            user.getId().equals(testUser.getId()) && user.getLastLoginAt() != null
+        ));
+    }
+
+    @Test
+    @DisplayName("禁用账号登录应失败")
+    void should_throw_exception_when_account_disabled() {
+        testUser.setStatus(UserStatus.DISABLED);
+        when(userRepository.findByUsername(testUsername))
+            .thenReturn(java.util.Optional.of(testUser));
+
+        AuthenticationFailedException exception = assertThrows(
+            AuthenticationFailedException.class,
+            () -> authService.login(testUsername, testPassword),
+            "禁用账号登录时应抛出 AuthenticationFailedException"
+        );
+
+        assertEquals("Invalid username or password", exception.getMessage());
+        verify(passwordEncoder, never()).matches(any(), any());
+        verify(jwtUtil, never()).generateToken(any(), any());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("登录成功应更新最近登录时间")
+    void should_update_last_login_time_when_login_success() {
+        assertNull(testUser.getLastLoginAt());
+        when(userRepository.findByUsername(testUsername))
+            .thenReturn(java.util.Optional.of(testUser));
+        when(passwordEncoder.matches(testPassword, testPasswordHash))
+            .thenReturn(true);
+        when(jwtUtil.generateToken(testUser.getId(), testUsername))
+            .thenReturn(testToken);
+
+        Instant beforeLogin = Instant.now();
+
+        authService.login(testUsername, testPassword);
+
+        verify(userRepository).save(argThat(user ->
+            user.getLastLoginAt() != null && !user.getLastLoginAt().isBefore(beforeLogin)
+        ));
     }
 
     /**

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -62,6 +63,30 @@ class CategoryServiceTest {
         assertEquals("休息", result.get(2).name());
         assertEquals("ACTIVE", result.get(0).status());
         verify(categoryRepository).findActiveByUserId(testUserId);
+    }
+
+    @Test
+    @DisplayName("should seed five default categories when active category list is empty")
+    void should_seed_default_categories_when_active_list_is_empty() {
+        when(categoryRepository.findActiveByUserId(testUserId))
+            .thenReturn(List.of())
+            .thenReturn(List.of(
+                createCategory(11L, testUserId, "工作", "#3b82f6", CategoryStatus.ACTIVE, 0),
+                createCategory(12L, testUserId, "学习", "#8b5cf6", CategoryStatus.ACTIVE, 1),
+                createCategory(13L, testUserId, "生活", "#10b981", CategoryStatus.ACTIVE, 2),
+                createCategory(14L, testUserId, "运动", "#f97316", CategoryStatus.ACTIVE, 3),
+                createCategory(15L, testUserId, "休息", "#64748b", CategoryStatus.ACTIVE, 4)
+            ));
+        when(categoryRepository.save(any(Category.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<CategoryDto> result = categoryService.getActiveCategories(testUserId);
+
+        assertEquals(List.of("工作", "学习", "生活", "运动", "休息"), result.stream().map(CategoryDto::name).toList());
+        ArgumentCaptor<Category> categoryCaptor = ArgumentCaptor.forClass(Category.class);
+        verify(categoryRepository, times(5)).save(categoryCaptor.capture());
+        assertEquals(List.of(0, 1, 2, 3, 4), categoryCaptor.getAllValues().stream().map(Category::getDisplayOrder).toList());
+        assertTrue(categoryCaptor.getAllValues().stream().allMatch(category -> category.getUserId().equals(testUserId)));
     }
 
     @Test

@@ -1,6 +1,9 @@
 package com.interval.stats;
 
 import com.interval.auth.config.SecurityConfig;
+import com.interval.auth.entity.AccountType;
+import com.interval.auth.entity.User;
+import com.interval.auth.entity.UserStatus;
 import com.interval.auth.repository.UserRepository;
 import com.interval.auth.util.JwtUtil;
 import com.interval.stats.dto.CategoryDurationSummaryDto;
@@ -17,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,7 +65,7 @@ class StatsControllerTest {
         when(jwtUtil.validateToken(token)).thenReturn(true);
         when(jwtUtil.getUserIdFromToken(token)).thenReturn(userId);
         when(jwtUtil.getUsernameFromToken(token)).thenReturn("alex");
-        when(userRepository.existsById(userId)).thenReturn(true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId, "alex")));
         when(statsService.getCategoryDurations(userId, startDate, endDate)).thenReturn(summary);
 
         mockMvc.perform(get("/api/stats/category-durations")
@@ -89,7 +93,7 @@ class StatsControllerTest {
         when(jwtUtil.validateToken(token)).thenReturn(true);
         when(jwtUtil.getUserIdFromToken(token)).thenReturn(userId);
         when(jwtUtil.getUsernameFromToken(token)).thenReturn("alex");
-        when(userRepository.existsById(userId)).thenReturn(true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(activeUser(userId, "alex")));
         when(statsService.getCategoryDurations(userId, startDate, endDate))
             .thenThrow(new IllegalArgumentException("startDate must be before or equal to endDate"));
 
@@ -100,5 +104,15 @@ class StatsControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.result").value("ERROR"))
             .andExpect(jsonPath("$.message").value("startDate must be before or equal to endDate"));
+    }
+
+    private User activeUser(Long userId, String username) {
+        User user = new User();
+        user.setId(userId);
+        user.setUsername(username);
+        user.setPasswordHash("hashed-password");
+        user.setAccountType(AccountType.USER);
+        user.setStatus(UserStatus.ACTIVE);
+        return user;
     }
 }

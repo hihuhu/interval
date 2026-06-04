@@ -94,4 +94,65 @@ describe('StatsView', () => {
     expect(mockedStatsService.getCategoryDurations).toHaveBeenLastCalledWith('2026-05-01', '2026-05-31');
     expect(wrapper.text()).toContain('这个时间范围还没有记录');
   });
+
+  it('renders custom date controls instead of native date inputs', async () => {
+    mockedStatsService.getCategoryDurations.mockResolvedValue({
+      startDate: '2026-05-18',
+      endDate: '2026-05-24',
+      totalSlotCount: 0,
+      totalRecordedMinutes: 0,
+      totalAvailableMinutes: 10080,
+      unrecordedMinutes: 10080,
+      categories: [],
+    });
+
+    const wrapper = mountView();
+    await flushPromises();
+
+    expect(wrapper.find('.range-control-card').exists()).toBe(true);
+    expect(wrapper.findAll('.date-field')).toHaveLength(2);
+    expect(wrapper.find('input[type="date"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="stats-start-date-trigger"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="stats-end-date-trigger"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="range-week"]').classes()).toContain('active');
+  });
+
+  it('opens a styled date popover from the stats date trigger', async () => {
+    mockedStatsService.getCategoryDurations.mockResolvedValue({
+      startDate: '2026-05-18',
+      endDate: '2026-05-24',
+      totalSlotCount: 0,
+      totalRecordedMinutes: 0,
+      totalAvailableMinutes: 10080,
+      unrecordedMinutes: 10080,
+      categories: [],
+    });
+
+    const wrapper = mountView();
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="stats-date-popover"]').exists()).toBe(false);
+
+    await wrapper.find('[data-testid="stats-start-date-trigger"]').trigger('click');
+
+    expect(wrapper.find('[data-testid="stats-date-popover"]').exists()).toBe(true);
+  });
+
+  it('does not render the next-step extension panel', async () => {
+    mockedStatsService.getCategoryDurations.mockResolvedValue({
+      startDate: '2026-05-18',
+      endDate: '2026-05-24',
+      totalSlotCount: 0,
+      totalRecordedMinutes: 0,
+      totalAvailableMinutes: 10080,
+      unrecordedMinutes: 10080,
+      categories: [],
+    });
+
+    const wrapper = mountView();
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain('下一步可扩展');
+    expect(wrapper.find('.next-panel').exists()).toBe(false);
+  });
 });
