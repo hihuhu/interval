@@ -46,7 +46,20 @@ logs/
 .cursor/workspaceStorage/
 
 # Codex workspace cache
-.codex/
+.codex/*
+!.codex/skills/
+.codex/skills/*
+!.codex/skills/interval-sdd-workflow/
+!.codex/skills/interval-sdd-workflow/**
+!.codex/skills/interval-spring-backend/
+!.codex/skills/interval-spring-backend/**
+!.codex/skills/interval-vue-frontend/
+!.codex/skills/interval-vue-frontend/**
+.codex/logs/
+.codex/runtime/
+.codex/*.log
+.codex/*.out
+.codex/*.err
 
 # =========================
 # Root env files

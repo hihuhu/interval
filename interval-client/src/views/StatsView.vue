@@ -1,6 +1,6 @@
 <template>
   <AppLayout :username="auth.username ?? 'User'" active-route="stats" @logout="logout">
-    <section class="stats-hero">
+    <section class="stats-hero" :class="{ 'date-picker-layer-active': datePickerOpen }">
       <div class="surface-card hero-main">
         <div class="hero-eyebrow"><span></span>CATEGORY DURATION STATS</div>
         <h1>分类耗时统计</h1>
@@ -534,10 +534,16 @@ async function logout() {
 
 <style scoped>
 .stats-hero {
+  position: relative;
+  z-index: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
   gap: 18px;
   margin-bottom: 22px;
+}
+
+.stats-hero.date-picker-layer-active {
+  z-index: 30;
 }
 
 .hero-main {

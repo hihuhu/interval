@@ -2,7 +2,7 @@
   <main class="auth-page">
     <section class="auth-card surface-card" aria-labelledby="change-password-title">
       <div class="brand">
-        <div class="logo-icon"></div>
+        <img class="logo-icon" :src="FAVICON_PATH" alt="" aria-hidden="true" />
         <span>Interval</span>
       </div>
       <div>
@@ -19,6 +19,18 @@
           <span>新密码</span>
           <input v-model="newPassword" class="input-underline" name="newPassword" type="password" required />
         </label>
+        <label>
+          <span>确认新密码</span>
+          <input
+            v-model="confirmPassword"
+            class="input-underline"
+            name="confirmPassword"
+            type="password"
+            autocomplete="new-password"
+            required
+          />
+        </label>
+        <p class="password-rule">{{ PASSWORD_RULE_TEXT }}</p>
         <p v-if="errorMessage" class="error" role="alert">{{ errorMessage }}</p>
         <button class="primary-action" type="submit" :disabled="loading">
           {{ loading ? '提交中...' : '确认修改' }}
@@ -31,18 +43,29 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { FAVICON_PATH } from '@/constants/brand';
 import * as authService from '@/services/authService';
 import { AUTH_MUST_CHANGE_PASSWORD_KEY } from '@/services/http';
 import { useAuthStore } from '@/stores/useAuthStore';
+import {
+  PASSWORD_RULE_TEXT,
+  getPasswordConfirmationMessage,
+  getPasswordValidationMessage,
+} from '@/utils/passwordRules';
 
 const auth = useAuthStore();
 const router = useRouter();
 const currentPassword = ref('');
 const newPassword = ref('');
+const confirmPassword = ref('');
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
 async function submit() {
+  errorMessage.value = getPasswordValidationMessage(newPassword.value)
+    || getPasswordConfirmationMessage(newPassword.value, confirmPassword.value);
+  if (errorMessage.value) return;
+
   loading.value = true;
   errorMessage.value = null;
   try {
@@ -124,6 +147,13 @@ label span {
 input {
   min-height: 40px;
   padding: 8px 0;
+}
+
+.password-rule {
+  margin: -6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .primary-action {

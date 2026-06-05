@@ -36,30 +36,9 @@ a {
 .logo-icon {
   width: 28px;
   height: 28px;
-  position: relative;
+  display: block;
   flex: 0 0 auto;
-}
-
-.logo-icon::before,
-.logo-icon::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-}
-
-.logo-icon::before {
-  top: 2px;
-  border-bottom: 13px solid #6366f1;
-}
-
-.logo-icon::after {
-  bottom: 2px;
-  border-top: 13px solid #a5b4fc;
+  object-fit: contain;
 }
 
 .surface-card {

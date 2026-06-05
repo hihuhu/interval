@@ -4,6 +4,181 @@
 
 ---
 
+## [2026-06-05] 右上角菜单新增自助修改密码弹窗
+
+### 本次目标
+- 在右上角用户名下拉菜单中新增“修改密码”入口。
+- 普通用户和管理员都可以主动修改自己的密码。
+- 修改密码必须使用有完整样式的弹窗，不跳转到无样式页面。
+
+### 已完成操作
+- 更新 `docs/design/sdd-admin-account-management.md`，补充自助修改密码弹窗设计和 API 约定。
+- 重写 `AppLayout` 用户菜单中文文案，新增“修改密码”和“退出登录”两个菜单动作。
+- 在 `AppLayout` 中新增共享修改密码弹窗，覆盖当前密码、新密码、确认新密码、规则提示、错误提示、成功反馈和提交中状态。
+- 弹窗沿用当前产品样式：遮罩、8px modal 圆角、分区头部/正文/底部、下划线输入框、渐变主按钮、成功/错误提示。
+- 通过现有 `authService.changePassword` 调用 `/api/auth/change-password`，没有绕过服务层。
+- 更新 `AppLayout` 测试，覆盖普通用户导航、管理员导航、菜单入口、弹窗样式骨架、密码校验和成功提交。
+
+### 技术决策
+- **决策**：把自助修改密码放在共享 `AppLayout`，而不是分别放到 Time Grid、Stats、Admin 页面。
+- **原因**：右上角菜单是普通用户和管理员共同入口，共享实现能保证行为和样式一致。
+- **影响**：所有使用 `AppLayout` 的受保护页面都自动获得自助改密能力。
+
+- **决策**：主动改密用弹窗，不复用 `/change-password` 页面。
+- **原因**：`/change-password` 是首次登录或重置后的强制改密流程；用户主动改密不应离开当前工作页面。
+- **影响**：当前页面状态不会丢失，交互更符合右上角账户菜单的使用场景。
+
+### 验证结果
+- `npm run test -- AppLayout` 通过：1 个测试文件 / 6 个测试。
+- `npm run test -- AppLayout AdminAccountView TimeGridView StatsView` 通过：4 个测试文件 / 23 个测试。
+- `npm run build` 通过。
+- `npm run test` 通过：26 个测试文件 / 90 个测试。
+- in-app browser 管理员页面真实验证：右上角菜单显示“修改密码”和“退出登录”；点击“修改密码”后弹窗存在 `.modal-head`、`.modal-body`、`.modal-foot`；弹窗圆角为 `8px`，遮罩为 `rgba(15, 23, 42, 0.36)`，主按钮为靛蓝渐变。
+
+### 遇到的问题
+- in-app browser 在尝试普通用户登录时触发虚拟剪贴板错误，导致文本输入验证中断；普通用户入口已由 `AppLayout` 组件测试覆盖。
+
+### 下次待办
+- [ ] 如需更完整的端到端验证，可在浏览器输入工具恢复后补一次普通用户真实登录改密流程。
+
+### 涉及文件
+- `docs/design/sdd-admin-account-management.md`
+- `interval-client/src/components/AppLayout.vue`
+- `interval-client/src/__tests__/AppLayout.test.ts`
+- `PROJECT_LOG.md`
+
+---
+
+## [2026-06-05] 放行 Codex 可迁移配置入 Git
+
+### 📋 本次目标
+- 调整 Git 忽略规则，让 Codex 的可复用 agents 和 skills 可以随仓库迁移到其他环境，避免重复配置。
+
+### ✅ 已完成操作
+- ✅ 盘点 `.codex` 目录内容，确认包含 `agents`、`skills`、`logs`、`runtime` 和根目录运行日志。
+- ✅ 统计 `.codex/agents` 共 215 个文件，`.codex/skills` 共 57 个文件。
+- ✅ 扫描 `.codex/agents` 和 `.codex/skills` 中的敏感关键词，命中内容为占位 API key、环境变量示例、token/JWT 规则说明和安全提醒，没有发现真实密钥格式内容。
+- ✅ 更新 `.gitignore`，放行 `.codex/agents/**` 和 `.codex/skills/**`。
+- ✅ 继续忽略 `.codex/logs/`、`.codex/runtime/` 和 `.codex` 根目录下的 `.log` / `.out` / `.err` 运行产物。
+
+### 🔧 技术决策
+- **决策**：提交 `.codex/agents` 和 `.codex/skills`，但不提交 `.codex/logs`、`.codex/runtime` 和运行日志。
+- **原因**：agents 和 skills 是可复用配置；logs、runtime 和启动日志是本机运行产物，迁移价值低且容易产生噪音。
+- **影响**：其他环境 clone 后可以获得本项目 Codex 配置；本机临时日志不会污染版本库。
+
+### ⚠️ 遇到的问题
+- `.codex` 原本整体被 `.gitignore` 忽略，导致新增项目 skills 默认不可提交；已改为按目录放行。
+
+### ✅ 验证结果
+- ✅ 已盘点 `.codex` 目录大小和文件数量。
+- ✅ 已运行敏感关键词扫描，命中内容均为示例、占位符或安全说明。
+- ✅ 已更新 `.gitignore` 放行可迁移配置并保留本机产物忽略规则。
+
+### 📝 下次待办
+- [ ] 如需提交，请只 stage 本次配置迁移相关文件，避免混入当前工作区已有前端业务改动。
+
+### 📂 涉及文件
+- `.gitignore`
+- `PROJECT_LOG.md`
+- `.codex/agents/**`
+- `.codex/skills/**`
+
+---
+
+## [2026-06-05] Cursor MDC 规则拆分为 Codex Skills
+
+### 📋 本次目标
+- 继续迁移前后端 `.cursor/rules/*.mdc` 规则，建立 Codex 可使用的分层结构，避免把所有 Cursor 规则粗暴塞进单个文件。
+
+### ✅ 已完成操作
+- ✅ 精确检查 `.cursor` 目录，确认根目录无 `.cursor`，后端有 12 个 `.mdc`，前端有 9 个 `.mdc`。
+- ✅ 读取并归类后端 `.mdc`：ApiResponse、GlobalExceptionHandler、SDD、开发流程、前后端分离、Spring Boot 分层、Controller、Service、Repository、DTO、Entity、Java 通用实践。
+- ✅ 读取并归类前端 `.mdc`：API service、SDD、开发流程、前后端分离、Vue 通用实践、组件、Pinia、Router、Vite/TypeScript 配置。
+- ✅ 新增 `.codex/skills/interval-sdd-workflow/SKILL.md`，承载项目 SDD、审批、测试优先和日志收尾流程。
+- ✅ 新增 `.codex/skills/interval-spring-backend/SKILL.md`，承载后端 Spring Boot 3、ApiResponse、异常处理、分层、DTO/Entity/Repository/Service/Controller 和 JUnit 规则。
+- ✅ 新增 `.codex/skills/interval-vue-frontend/SKILL.md`，承载 Vue 3、TypeScript、API service、组件、Pinia、Router、项目配置、测试和浏览器验证规则。
+- ✅ 更新根目录、前端、后端 `AGENTS.md`，明确 Codex 应使用这些项目专用 skills，并保留 Cursor 规则文件作为 Cursor 兼容源。
+- ✅ 更新 `.gitignore`，继续忽略 `.codex` 缓存文件，但放行本次新增的 3 个项目专用 skills。
+
+### 🔧 技术决策
+- **决策**：把 `.mdc` 规则拆为 3 个 Codex skills，而不是继续膨胀 `AGENTS.md`。
+- **原因**：`AGENTS.md` 适合放始终可见的项目硬约束；细粒度工作流和技术栈清单放在 skill 中，可按任务触发，减少无关上下文。
+- **影响**：后续后端任务会触发 `interval-spring-backend`，前端任务会触发 `interval-vue-frontend`，新功能或非平凡变更会触发 `interval-sdd-workflow`。
+
+- **决策**：仍不删除 `.cursor` 和 `.cursorrules`。
+- **原因**：这些文件仍可服务 Cursor；Codex 现在有自己的入口，不需要破坏旧工具兼容性。
+- **影响**：项目同时支持 Cursor 和 Codex，迁移风险低。
+
+- **决策**：只在 `.gitignore` 中放行项目专用 skills，不整体放行 `.codex/`。
+- **原因**：`.codex/` 下还有日志、runtime、个人 agents 和缓存内容，不应全部纳入版本控制。
+- **影响**：团队可获得本次迁移的 Codex skills，同时避免提交本地运行噪音。
+
+### ⚠️ 遇到的问题
+- 初次并行读取上下文文件时命令超时，已改用更长超时分批读取。
+
+### ✅ 验证结果
+- ✅ 已确认后端 `.cursor/rules` 下 12 个 `.mdc` 文件已读取并迁移。
+- ✅ 已确认前端 `.cursor/rules` 下 9 个 `.mdc` 文件已读取并迁移。
+- ✅ 已新增 3 个项目专用 Codex skills。
+- ✅ 已确认 `.gitignore` 放行 3 个项目专用 Codex skills。
+
+### 📝 下次待办
+- [ ] 下一次实际开发任务中观察这些 skills 是否按预期触发；如触发不稳定，再调整 skill description。
+- [ ] 如未来确认只使用 Codex，可考虑删除或归档 Cursor 规则文件。
+
+### 📂 涉及文件
+- `AGENTS.md`
+- `interval-server/AGENTS.md`
+- `interval-client/AGENTS.md`
+- `.codex/skills/interval-sdd-workflow/SKILL.md`
+- `.codex/skills/interval-spring-backend/SKILL.md`
+- `.codex/skills/interval-vue-frontend/SKILL.md`
+- `.gitignore`
+- `PROJECT_LOG.md`
+
+---
+
+## [2026-06-05] Cursor 规则迁移为 Codex 项目规则
+
+### 📋 本次目标
+- 将项目内 Cursor 规则文件迁移为 Codex 可读取的 `AGENTS.md`，避免后续运行、开发和验证流程不按项目规定执行。
+
+### ✅ 已完成操作
+- ✅ 补读 `PROJECT_LOG.md` 和 `QUICK_START.md`，恢复项目上下文与运行规则。
+- ✅ 扫描 Cursor 相关规则文件，确认存在根目录、后端、前端三处 `.cursorrules`。
+- ✅ 新增根目录 `AGENTS.md`，固化启动前必读、SDD 优先、测试优先、运行项目和日志更新规则。
+- ✅ 新增 `interval-server/AGENTS.md`，迁移 Spring Boot 3 / Java 17 后端架构、SDD、测试、Controller、Service、Repository、DTO、Entity 规则。
+- ✅ 新增 `interval-client/AGENTS.md`，迁移 Vue 3 / TypeScript 前端架构、SDD、测试、组件、Pinia、API service、Router 和 UI 验证规则。
+- ✅ 保留原 `.cursorrules` 文件，避免破坏 Cursor 兼容性。
+
+### 🔧 技术决策
+- **决策**：使用根级 `AGENTS.md` 加前后端子目录 `AGENTS.md` 的结构，而不是只生成一个大文件。
+- **原因**：Codex 会按工作目录范围应用更接近的项目指令；子项目规则拆分后，后端和前端约束更明确。
+- **影响**：后续处理 `interval-server/` 或 `interval-client/` 下任务时，Codex 更容易拿到对应技术栈和流程约束。
+
+- **决策**：不删除 `.cursorrules`。
+- **原因**：删除会破坏 Cursor 继续使用这些规则；迁移目标是让 Codex 可用，不需要移除原规则源。
+- **影响**：Cursor 和 Codex 可并行使用同一套规则；后续如确认不再使用 Cursor，可再清理旧文件。
+
+### ⚠️ 遇到的问题
+- 官方 Codex manual 拉取时返回 HTTP 403，本次按当前 Codex 会话中已暴露的 `AGENTS.md` 项目规则约定执行迁移。
+
+### ✅ 验证结果
+- ✅ 使用 `rg --files` 确认 Cursor 规则文件共 3 个：`.cursorrules`、`interval-server/.cursorrules`、`interval-client/.cursorrules`。
+- ✅ 已读取并迁移三处规则内容。
+
+### 📝 下次待办
+- [ ] 后续如确认完全不用 Cursor，可删除或归档 `.cursorrules` 文件。
+- [ ] 下一次实际运行项目前，按 `AGENTS.md` 先读 `PROJECT_LOG.md` 和 `QUICK_START.md`，再启动后端与前端。
+
+### 📂 涉及文件
+- `AGENTS.md`
+- `interval-server/AGENTS.md`
+- `interval-client/AGENTS.md`
+- `PROJECT_LOG.md`
+
+---
+
 ## [2026-05-28] Time Grid 分类回显、悬浮信息与性能优化
 
 ### 📋 本次目标

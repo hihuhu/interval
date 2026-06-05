@@ -36,6 +36,7 @@ describe('ChangePasswordView', () => {
 
     await wrapper.find('input[name="currentPassword"]').setValue('123456');
     await wrapper.find('input[name="newPassword"]').setValue('ChangedPass123');
+    await wrapper.find('input[name="confirmPassword"]').setValue('ChangedPass123');
     await wrapper.find('form').trigger('submit.prevent');
 
     expect(authService.changePassword).toHaveBeenCalledWith({
@@ -44,5 +45,27 @@ describe('ChangePasswordView', () => {
     });
     expect(auth.mustChangePassword).toBe(false);
     expect(push).toHaveBeenCalledWith('/admin');
+  });
+
+  it('requires valid and matching new password before submitting', async () => {
+    const wrapper = mount(ChangePasswordView);
+
+    expect(wrapper.text()).toContain('至少 8 位，必须同时包含字母和数字');
+    expect(wrapper.find('input[name="confirmPassword"]').exists()).toBe(true);
+
+    await wrapper.find('input[name="currentPassword"]').setValue('123456');
+    await wrapper.find('input[name="newPassword"]').setValue('abcdefgh');
+    await wrapper.find('input[name="confirmPassword"]').setValue('abcdefgh');
+    await wrapper.find('form').trigger('submit.prevent');
+
+    expect(wrapper.text()).toContain('密码必须同时包含字母和数字');
+    expect(authService.changePassword).not.toHaveBeenCalled();
+
+    await wrapper.find('input[name="newPassword"]').setValue('ChangedPass123');
+    await wrapper.find('input[name="confirmPassword"]').setValue('ChangedPass456');
+    await wrapper.find('form').trigger('submit.prevent');
+
+    expect(wrapper.text()).toContain('两次输入的密码不一致');
+    expect(authService.changePassword).not.toHaveBeenCalled();
   });
 });

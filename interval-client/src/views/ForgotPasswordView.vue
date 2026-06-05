@@ -2,7 +2,7 @@
   <main class="auth-page">
     <section class="auth-card surface-card" aria-labelledby="forgot-password-title">
       <div class="brand">
-        <div class="logo-icon"></div>
+        <img class="logo-icon" :src="FAVICON_PATH" alt="" aria-hidden="true" />
         <span>Interval</span>
       </div>
       <div>
@@ -16,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import { FAVICON_PATH } from '@/constants/brand';
 </script>
 
 <style scoped>

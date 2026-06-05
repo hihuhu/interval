@@ -86,6 +86,30 @@ describe('AdminAccountView', () => {
     expect(wrapper.text()).toContain('手动设置');
   });
 
+  it('requires valid and matching manual reset password before submitting', async () => {
+    const wrapper = await mountView();
+
+    await wrapper.get('[data-test="reset-2"]').trigger('click');
+    await wrapper.findAll('.segmented-control button')[1].trigger('click');
+
+    expect(wrapper.text()).toContain('至少 8 位，必须同时包含字母和数字');
+    expect(wrapper.find('input[name="confirmTemporaryPassword"]').exists()).toBe(true);
+
+    await wrapper.get('input[name="temporaryPassword"]').setValue('abcdefgh');
+    await wrapper.get('input[name="confirmTemporaryPassword"]').setValue('abcdefgh');
+    await wrapper.find('.modal-foot .btn.primary').trigger('click');
+
+    expect(wrapper.text()).toContain('密码必须同时包含字母和数字');
+    expect(adminService.resetPassword).not.toHaveBeenCalled();
+
+    await wrapper.get('input[name="temporaryPassword"]').setValue('TempPass123');
+    await wrapper.get('input[name="confirmTemporaryPassword"]').setValue('TempPass456');
+    await wrapper.find('.modal-foot .btn.primary').trigger('click');
+
+    expect(wrapper.text()).toContain('两次输入的密码不一致');
+    expect(adminService.resetPassword).not.toHaveBeenCalled();
+  });
+
   it('filters users by keyword and status', async () => {
     const wrapper = await mountView();
 
@@ -102,5 +126,15 @@ describe('AdminAccountView', () => {
     expect(wrapper.get('[data-test="user-row-3"]').classes()).toContain('disabled-row');
     await wrapper.get('[data-test="user-row-3"]').trigger('click');
     expect(wrapper.get('[data-test="user-detail"]').classes()).toContain('disabled-detail');
+  });
+
+  it('keeps prototype visual structure for metrics and selected user detail', async () => {
+    const wrapper = await mountView();
+
+    expect(wrapper.findAll('.metric .metric-top')).toHaveLength(5);
+    expect(wrapper.findAll('.metric .metric-note')).toHaveLength(5);
+    expect(wrapper.find('[data-test="user-detail"] .detail-header').exists()).toBe(true);
+    expect(wrapper.find('[data-test="user-detail"] .status-pill').exists()).toBe(true);
+    expect(wrapper.find('[data-test="user-detail"] .action-stack').exists()).toBe(true);
   });
 });

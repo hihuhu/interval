@@ -2,7 +2,7 @@
   <main class="auth-page">
     <section class="auth-card surface-card" aria-labelledby="login-title">
       <div class="brand">
-        <div class="logo-icon"></div>
+        <img class="logo-icon" :src="FAVICON_PATH" alt="" aria-hidden="true" />
         <span>Interval</span>
       </div>
 
@@ -47,6 +47,7 @@
 import { ref } from 'vue';
 import { LogIn } from '@lucide/vue';
 import { useRoute, useRouter } from 'vue-router';
+import { FAVICON_PATH } from '@/constants/brand';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 const auth = useAuthStore();

@@ -138,6 +138,27 @@ describe('StatsView', () => {
     expect(wrapper.find('[data-testid="stats-date-popover"]').exists()).toBe(true);
   });
 
+  it('raises the stats hero layer while the date popover is open', async () => {
+    mockedStatsService.getCategoryDurations.mockResolvedValue({
+      startDate: '2026-05-18',
+      endDate: '2026-05-24',
+      totalSlotCount: 0,
+      totalRecordedMinutes: 0,
+      totalAvailableMinutes: 10080,
+      unrecordedMinutes: 10080,
+      categories: [],
+    });
+
+    const wrapper = mountView();
+    await flushPromises();
+
+    expect(wrapper.find('.stats-hero').classes()).not.toContain('date-picker-layer-active');
+
+    await wrapper.find('[data-testid="stats-start-date-trigger"]').trigger('click');
+
+    expect(wrapper.find('.stats-hero').classes()).toContain('date-picker-layer-active');
+  });
+
   it('does not render the next-step extension panel', async () => {
     mockedStatsService.getCategoryDurations.mockResolvedValue({
       startDate: '2026-05-18',
